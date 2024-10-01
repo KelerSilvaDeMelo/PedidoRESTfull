@@ -38,8 +38,8 @@ const
   DB_USER = 'sispedido';           // 'sispedido'       'root';
   DB_PASSWORD = 'M@Ped80390.2024'; // 'M@Ped80390.2024' 'M@Sql80390.2024';
   DB_NAME = 'pedidosDB';
-  DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTfull\Win32\Debug\libmysql.dll';
-//  DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTfull\Win64\Debug\libmysql.dll';
+  DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTful\Win32\Debug\libmysql.dll';
+//  DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTful\Win64\Debug\libmysql.dll';
 
 implementation
 

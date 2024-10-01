@@ -10,9 +10,21 @@ object wmServerPedido: TwmServerPedido
     end
     item
       MethodType = mtGet
+      Name = 'ListarClientes'
+      PathInfo = '/ListarClientes'
+      OnAction = wmServerPedidoListarClientesAction
+    end
+    item
+      MethodType = mtGet
       Name = 'ListarPedidos'
       PathInfo = '/ListarPedidos'
       OnAction = WebModule1ListarPedidosAction
+    end
+    item
+      MethodType = mtGet
+      Name = 'ListarItensDoPedido'
+      PathInfo = '/ListarItensDoPedido'
+      OnAction = wmServerPedidoListarItensDoPedidoAction
     end
     item
       MethodType = mtPost
@@ -31,6 +43,12 @@ object wmServerPedido: TwmServerPedido
       Name = 'APIStatus'
       PathInfo = '/APIStatus'
       OnAction = wmServerPedidoAPIStatusAction
+    end
+    item
+      MethodType = mtGet
+      Name = 'ListarProdutos'
+      PathInfo = '/ListarProdutos'
+      OnAction = WebModule1ListarProdutosAction
     end>
   Height = 204
   Width = 424
@@ -190,5 +208,9 @@ object wmServerPedido: TwmServerPedido
     Macros = <>
     Left = 168
     Top = 96
+  end
+  object FDStanStorageJSONLink1: TFDStanStorageJSONLink
+    Left = 312
+    Top = 24
   end
 end

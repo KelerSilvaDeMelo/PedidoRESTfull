@@ -59,7 +59,7 @@ object wmServerPedido: TwmServerPedido
     Top = 24
   end
   object MySQLDriverLink: TFDPhysMySQLDriverLink
-    VendorLib = 'C:\Provas\WK Tecnology\ServidorRESTful\Win64\Debug\libmysql.dll'
+    VendorLib = 'C:\Provas\WK Tecnology\ServidorRESTfull\Win32\Debug\libmysql.dll'
     Left = 168
     Top = 24
   end
