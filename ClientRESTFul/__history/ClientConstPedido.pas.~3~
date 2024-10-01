@@ -1,0 +1,18 @@
+unit ServerConstPedido;
+
+interface
+
+const
+  // Essas constantes definem as "rotas" ou ações que podem ser chamadas no servidor
+  SERVER_PORT = 8080;
+  SERVER_ROOT_URL = 'http://localhost:' + IntToStr(SERVER_PORT);
+
+  // Rotas no servidor para os métodos correspondentes no TWebModule
+  ROTA_LISTAR_PEDIDOS = '/listarPedidos';
+  ROTA_INCLUIR_PEDIDO = '/incluirPedido';
+  ROTA_ADICIONAR_ITEM_PEDIDO = '/adicionarItemPedido';
+
+implementation
+
+end.
+

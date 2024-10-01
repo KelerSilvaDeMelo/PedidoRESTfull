@@ -1,0 +1,587 @@
+unit WebModulePedido;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, Web.HTTPApp, FireDAC.Stan.Intf,
+  FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS,
+  FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt,
+  Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.UI.Intf,
+  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Phys, FireDAC.ConsoleUI.Wait,
+  ServerConstPedido, FireDAC.VCLUI.Wait, FireDAC.Phys.MySQLDef,
+  FireDAC.Phys.MySQL, FireDAC.Comp.ScriptCommands, FireDAC.Stan.Util,
+  FireDAC.Comp.Script;
+
+type
+  TWebModule1 = class(TWebModule)
+    cnPedidoDB: TFDConnection;
+    MySQLDriverLink: TFDPhysMySQLDriverLink;
+    sqlCriaPedidoDB: TFDScript;
+    sqlApagaPedidoDB: TFDScript;
+    procedure WebModuleCreate(Sender: TObject);
+    procedure WebModule1DefaultHandlerAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure WebModule1ListarPedidosAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure WebModule1InserirPedidoAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure WebModule1ListarProdutosAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure WebModule1InserirPedidoItemAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure WebModuleDestroy(Sender: TObject);
+  private
+    { Private declarations }
+    procedure ConectaBancoDeDados;
+    procedure DesconectaBancoDeDados;
+    procedure CriaPedidosDB;
+    procedure ApagaPedidosDB;
+
+    procedure RetornaSucesso(Response: TWebResponse; Mensagem: String; CodigoSucesso: Integer);
+    procedure RetornaSucessoLista(Response: TWebResponse; JSONResult: TStringList; CodigoSucesso: Integer);
+    procedure RetornaSucessoChave(Response: TWebResponse; Mensagem, CampoChave: String; ValorChave: Integer; CodigoSucesso: Integer);
+
+    procedure RetornaErro(Response: TWebResponse; Mensagem: String; CodigoErro: Integer);
+
+    function ValidaInserePedido(Request: TWebRequest; Response: TWebResponse;
+      var Handled: Boolean): Boolean;
+    function ValidaInserePedidoItem(Request: TWebRequest; Response: TWebResponse;
+      var Handled: Boolean): Boolean;
+
+    function ClienteExiste(ClienteID: String): Boolean;
+    function ProdutoExiste(ProdutoID: String): Boolean;
+    function PedidoExiste(PedidoID: String): Boolean;
+
+    function DataConsistente(Data: String): Boolean;
+    function ValorMonetarioConsistente(Valor: String): Boolean;
+    function ValorIntegerConsistente(Valor: String): Boolean;
+    function ValorPositivo(Valor: String): Boolean;
+  public
+    { Public declarations }
+  end;
+
+var
+  WebModuleClass: TComponentClass = TWebModule1;
+
+implementation
+
+uses
+  System.IniFiles;
+
+{%CLASSGROUP 'System.Classes.TPersistent'}
+{$R *.dfm}
+
+{ -------------------------------[ CONSTRUTOR ]------------------------------- }
+procedure TWebModule1.WebModuleCreate(Sender: TObject);
+begin
+  Self.ConectaBancoDeDados;
+end;
+
+procedure TWebModule1.WebModuleDestroy(Sender: TObject);
+begin
+  Self.DesconectaBancoDeDados;
+end;
+
+{ --------------------------------[ PRIVADO ]--------------------------------- }
+procedure TWebModule1.ConectaBancoDeDados;
+var
+  ArquivoINI, HostServer, Port, UserName, Password, Database, VendorLib: String;
+  Ini: TIniFile;
+begin
+  ArquivoINI := ExtractFilePath(ParamStr(0)) + 'pedido_config.ini';
+  HostServer := DB_HOST;
+  Port       := DB_PORT;
+  UserName   := DB_USER;
+  Password   := DB_PASSWORD;
+  Database   := DB_NAME;
+  VendorLib  := DB_VENDORLIB;
+
+  Ini := TIniFile.Create(ArquivoINI);
+  try
+    if FileExists(ArquivoINI) then
+    begin
+      HostServer := Ini.ReadString('database', 'host', HostServer);
+      Port := Ini.ReadString('database', 'port', Port);
+      UserName := Ini.ReadString('database', 'user', UserName);
+      Password := Ini.ReadString('database', 'password', Password);
+      Database := Ini.ReadString('database', 'database', Database);
+      VendorLib := Ini.ReadString('database', 'vendorlib', VendorLib);
+    end
+    else
+    begin
+      Ini.WriteString('database', 'host', HostServer);
+      Ini.WriteString('database', 'port', Port);
+      Ini.WriteString('database', 'user', UserName);
+      Ini.WriteString('database', 'password', Password);
+      Ini.WriteString('database', 'database', Database);
+      Ini.WriteString('database', 'vendorlib', VendorLib);
+    end;
+  finally
+    Ini.Free;
+  end;
+
+  Self.cnPedidoDB.Params.Values['Server'] := HostServer;
+  Self.cnPedidoDB.Params.Values['Port'] := Port;
+  Self.cnPedidoDB.Params.Values['User_Name'] := UserName;
+  Self.cnPedidoDB.Params.Values['Password'] := Password;
+  Self.cnPedidoDB.Params.Values['Database'] := Database;
+  Self.MySQLDriverLink.VendorLib := VendorLib;
+
+  try
+    Self.cnPedidoDB.Connected := True;
+  except on E: Exception do
+    if Pos('Unknown database', E.Message) > 0 then
+    begin
+      // Se o banco de dados não existir, será criado e implantado.
+      Self.CriaPedidosDB;
+
+      // Fecha e reabre a conexão com o banco de dados criado
+      Self.cnPedidoDB.Close;
+      Self.cnPedidoDB.Params.Database := Database;
+      Self.cnPedidoDB.Open;
+    end
+    else
+      raise;
+  end;
+end;
+
+procedure TWebModule1.DesconectaBancoDeDados;
+begin
+  if Self.cnPedidoDB.Connected then
+    Self.cnPedidoDB.Connected := False;
+end;
+
+procedure TWebModule1.CriaPedidosDB;
+begin
+  // Se o banco de dados não existir, será criado e implantado.
+  if Self.cnPedidoDB.Connected then
+    Self.cnPedidoDB.Connected := False;
+
+  Self.cnPedidoDB.Params.Database := '';
+  Self.cnPedidoDB.Open;
+  Self.sqlCriaPedidoDB.ExecuteAll;
+  Self.cnPedidoDB.Close;
+end;
+
+procedure TWebModule1.ApagaPedidosDB;
+begin
+  // Se o banco de dados não existir, será removido.
+  Self.cnPedidoDB.Params.Database := '';
+  Self.cnPedidoDB.Open;
+  Self.sqlApagaPedidoDB.ExecuteAll;
+  Self.cnPedidoDB.Close;
+end;
+
+procedure TWebModule1.RetornaSucesso(Response: TWebResponse; Mensagem: String; CodigoSucesso: Integer);
+begin
+  Response.ContentType := 'application/json';
+  Response.Content := Format('{"message": "%s"}', [Mensagem]);
+  Response.StatusCode := CodigoSucesso;
+end;
+
+procedure TWebModule1.RetornaSucessoLista(Response: TWebResponse;
+  JSONResult: TStringList; CodigoSucesso: Integer);
+begin
+  Response.ContentType := 'application/json';
+  Response.Content := '[' + JSONResult.CommaText + ']';
+  Response.StatusCode := 200;
+end;
+
+procedure TWebModule1.RetornaSucessoChave(Response: TWebResponse; Mensagem, CampoChave: String; ValorChave: Integer; CodigoSucesso: Integer);
+begin
+  Response.ContentType := 'application/json';
+  Response.Content := Format('{"message": "%s", "%s": %d}', [Mensagem, CampoChave, ValorChave]);
+  Response.StatusCode := CodigoSucesso;
+end;
+
+procedure TWebModule1.RetornaErro(Response: TWebResponse; Mensagem: String; CodigoErro: Integer);
+begin
+  Response.ContentType := 'application/json';
+  Response.Content := Format('{"error": "%d", "message": "%s"}', [CodigoErro, Mensagem]);
+  Response.StatusCode := CodigoErro;
+end;
+
+function TWebModule1.ValidaInserePedido(Request: TWebRequest;
+  Response: TWebResponse; var Handled: Boolean): Boolean;
+var
+  ClienteID, PedidoData, PedidoValor, MensagemErro: String;
+begin
+  // Valida ClienteID
+  ClienteID := Request.ContentFields.Values['cliente_id'];
+  Result := Self.ClienteExiste(ClienteID);
+  if not Result then
+  begin
+    MensagemErro := 'Cliente ' + ClienteID + ' não exites no banco de dados.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  // Valida PedidoData
+  PedidoData := Request.ContentFields.Values['data'];
+  Result := Self.DataConsistente(PedidoData);
+  if not Result then
+  begin
+    MensagemErro := 'Data inválida ' + PedidoData + '.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  // Valida PedidoValor
+  PedidoValor := Request.ContentFields.Values['valor_total'];
+  Result := Self.ValorMonetarioConsistente(PedidoValor);
+  if not Result then
+  begin
+    MensagemErro := 'Valor monetário inválido ' + PedidoValor + '.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+end;
+
+function TWebModule1.ValidaInserePedidoItem(Request: TWebRequest;
+  Response: TWebResponse; var Handled: Boolean): Boolean;
+var
+  FDQuery: TFDQuery;
+  PedidoID, ProdutoID: String;
+  Quantidade, ValorUnitario, ValorTotal: Currency;
+  MensagemErro: String;
+begin
+  Result := True;
+
+  // Valida PedidoID (numero_pedido)
+  PedidoID := Request.ContentFields.Values['numero_pedido'];
+  Result := PedidoExiste(PedidoID);
+  if not Result then
+  begin
+    MensagemErro := 'Pedido ' + PedidoID + ' não existe.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  // Valida ProdutoID (codigo_produto)
+  ProdutoID := Request.ContentFields.Values['codigo_produto'];
+  Result := ProdutoExiste(ProdutoID);
+  if not Result then
+  begin
+    MensagemErro := 'Produto ' + ProdutoID + ' não existe.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  // Valida Quantidade
+  Result := TryStrToCurr(Request.ContentFields.Values['quantidade'], Quantidade) or (Quantidade > 0);
+  if not Result then
+  begin
+    MensagemErro := 'Quantidade inválida.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  // Valida Valor Unitário
+  Result := TryStrToCurr(Request.ContentFields.Values['valor_unitario'], ValorUnitario) or (ValorUnitario > 0);
+  if not Result then
+  begin
+    MensagemErro := 'Valor unitário inválido.';
+    Self.RetornaErro(Response, MensagemErro, 400);
+    Handled := True;
+    Exit;
+  end;
+end;
+
+function TWebModule1.ClienteExiste(ClienteID: String): Boolean;
+var
+  FDQuery: TFDQuery;
+begin
+  Result := False;
+  if Trim(ClienteID) = '' then
+    Exit;
+
+  FDQuery := TFDQuery.Create(nil);
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text :=
+      'SELECT COUNT(*) AS Total FROM clientes WHERE codigo = :cliente_id';
+    FDQuery.ParamByName('cliente_id').AsString := ClienteID;
+    FDQuery.Open;
+
+    // Se o Total for maior que 0, o cliente existe
+    Result := FDQuery.FieldByName('Total').AsInteger > 0;
+  finally
+    FDQuery.Free;
+  end;
+end;
+
+function TWebModule1.ProdutoExiste(ProdutoID: String): Boolean;
+var
+  FDQuery: TFDQuery;
+begin
+  Result := False;
+  if Trim(ProdutoID)='' then
+    Exit;
+
+  FDQuery := TFDQuery.Create(nil);
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := 'SELECT COUNT(*) AS Total FROM produtos WHERE codigo = :codigo_produto';
+    FDQuery.ParamByName('codigo_produto').AsString := ProdutoID;
+    FDQuery.Open;
+
+    Result := FDQuery.FieldByName('Total').AsInteger > 0;
+  finally
+    FDQuery.Free;
+  end;
+end;
+
+function TWebModule1.PedidoExiste(PedidoID: String): Boolean;
+var
+  FDQuery: TFDQuery;
+begin
+  Result := False;
+  if Trim(PedidoID)='' then
+    Exit;
+
+  FDQuery := TFDQuery.Create(nil);
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := 'SELECT COUNT(*) AS Total FROM pedidos WHERE numero_pedido = :numero_pedido';
+    FDQuery.ParamByName('numero_pedido').AsString := PedidoID;
+    FDQuery.Open;
+
+    Result := FDQuery.FieldByName('Total').AsInteger > 0;
+  finally
+    FDQuery.Free;
+  end;
+end;
+
+function TWebModule1.DataConsistente(Data: String): Boolean;
+var
+  DataTeste: TDateTime;
+begin
+  Result := TryStrToDate(Data, DataTeste);
+end;
+
+function TWebModule1.ValorMonetarioConsistente(Valor: String): Boolean;
+var
+  ValorMonetarioTeste: Currency;
+begin
+  Result := TryStrToCurr(Valor, ValorMonetarioTeste);
+end;
+
+function TWebModule1.ValorIntegerConsistente(Valor: String): Boolean;
+var
+  ValorIntegerTeste: Integer;
+begin
+  Result := TryStrToInt(Valor, ValorIntegerTeste);
+end;
+
+function TWebModule1.ValorPositivo(Valor: String): Boolean;
+var
+  ValorIntegerTeste: Integer;
+begin
+  Result := TryStrToInt(Valor, ValorIntegerTeste) and (ValorIntegerTeste >= 0);
+end;
+
+
+{ ----------------------------------[ ROTA ]---------------------------------- }
+// Rota @padrão "/"
+procedure TWebModule1.WebModule1DefaultHandlerAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  Mensagem: String;
+begin
+  Mensagem := 'Recurso não encontrado';
+  Self.RetornaErro(Response, Mensagem, 404);
+  Handled := True;
+end;
+
+// Rota @ListarPedidos
+procedure TWebModule1.WebModule1ListarPedidosAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  FDQuery: TFDQuery;
+  JSONResult: TStringList;
+  Mensagem: String;
+begin
+  FDQuery := TFDQuery.Create(nil);
+  JSONResult := TStringList.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    // Certifique-se de que a conexão está configurada
+    FDQuery.SQL.Text := 'SELECT * FROM pedidos';
+
+    try
+      FDQuery.Open;
+
+      // Converte os resultados da query em JSON
+      while not FDQuery.Eof do
+      begin
+        JSONResult.Add
+          (Format('{ "numero_pedido": %d, "codigo_cliente": "%d", "data_emissao": "%s", "valor_total": %.2f }',
+          [FDQuery.FieldByName('numero_pedido').AsInteger,
+          FDQuery.FieldByName('codigo_cliente').AsInteger,
+          DateToStr(FDQuery.FieldByName('data_emissao').AsDateTime),
+          FDQuery.FieldByName('valor_total').AsFloat]));
+        FDQuery.Next;
+      end;
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoLista(Response, JSONResult, 200);
+    except
+      on E: Exception do
+      begin
+        Mensagem := Format('{"error": "500", "message": "%s"}', [E.Message]);
+        Self.RetornaErro(Response, Mensagem, 500);
+        Handled := True;
+      end;
+    end;
+
+  finally
+    FDQuery.Free;
+    JSONResult.Free;
+  end;
+end;
+
+// Rota @InserirPedido
+procedure TWebModule1.WebModule1InserirPedidoAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  FDQuery: TFDQuery;
+  PedidoID: Integer;
+  Mensagem: String;
+begin
+  if Self.ValidaInserePedido(Request, Response, Handled) then
+  begin
+    FDQuery := TFDQuery.Create(nil);
+    try
+      FDQuery.Connection := Self.cnPedidoDB;
+      FDQuery.SQL.Text :=
+        'INSERT INTO pedidos (codigo_cliente, data_emissao, valor_total) VALUES (:cliente_id, :data, :valor_total)';
+      FDQuery.ParamByName('cliente_id').AsInteger :=
+        StrToInt(Request.ContentFields.Values['cliente_id']);
+      FDQuery.ParamByName('data').AsDate :=
+        StrToDate(Request.ContentFields.Values['data']);
+      FDQuery.ParamByName('valor_total').AsFloat :=
+        StrToFloat(Request.ContentFields.Values['valor_total']);
+
+      try
+        FDQuery.ExecSQL;
+
+        // Obter o ID gerado do pedido
+        PedidoID := Self.cnPedidoDB.GetLastAutoGenValue('numero_pedido');
+
+        // Retorna uma resposta de sucesso com o ID do pedido criado
+        Mensagem := 'Pedido criado com sucesso';
+        Self.RetornaSucessoChave(Response, Mensagem, 'pedido_id', PedidoID, 201);
+      except
+        on E: Exception do
+        begin
+          Mensagem := E.Message;
+          Self.RetornaErro(Response, Mensagem, 500);
+          Handled := True;
+        end;
+      end;
+    finally
+      FDQuery.Free;
+    end;
+  end;
+end;
+
+// Rota @InserirPedidoItem
+procedure TWebModule1.WebModule1InserirPedidoItemAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  FDQuery: TFDQuery;
+  PedidoID, ProdutoID: Integer;
+  Quantidade, ValorUnitario, ValorTotal: Currency;
+  Mensagem: String;
+begin
+  if Self.ValidaInserePedidoItem(Request, Response, Handled) then
+  begin
+    // Calcula o Valor Total
+    ValorTotal := Quantidade * ValorUnitario;
+
+    // Insere o item do pedido
+    FDQuery := TFDQuery.Create(nil);
+    try
+      FDQuery.Connection := Self.cnPedidoDB;
+      FDQuery.SQL.Text := 'INSERT INTO pedido_itens (numero_pedido, codigo_produto, quantidade, valor_unitario, valor_total) ' +
+                          'VALUES (:numero_pedido, :codigo_produto, :quantidade, :valor_unitario, :valor_total)';
+      FDQuery.ParamByName('numero_pedido').AsInteger := PedidoID;
+      FDQuery.ParamByName('codigo_produto').AsInteger := ProdutoID;
+      FDQuery.ParamByName('quantidade').AsCurrency := Quantidade;
+      FDQuery.ParamByName('valor_unitario').AsCurrency := ValorUnitario;
+      FDQuery.ParamByName('valor_total').AsCurrency := ValorTotal;
+
+      try
+        FDQuery.ExecSQL;
+
+        // Retorna sucesso
+        Mensagem := 'Item inserido com sucesso';
+        Self.RetornaSucesso(Response, Mensagem, 201);
+      except
+        on E: Exception do
+        begin
+          Mensagem := 'Erro ao inserir o item: ' + E.Message;
+          Self.RetornaErro(Response, Mensagem, 500);
+          Handled := True;
+        end;
+      end;
+    finally
+      FDQuery.Free;
+    end;
+  end;
+end;
+
+
+// Rota @ListarProdutos
+procedure TWebModule1.WebModule1ListarProdutosAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  FDQuery: TFDQuery;
+  JSONResult: TStringList;
+  Mensagem: String;
+begin
+  FDQuery := TFDQuery.Create(nil);
+  JSONResult := TStringList.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := 'SELECT * FROM produtos';
+
+    try
+      FDQuery.Open;
+
+      // Converte os resultados da query em JSON
+      while not FDQuery.Eof do
+      begin
+        JSONResult.Add
+          (Format('{ "codigo": %d, "descricao": "%s", "preco_venda": %.2f }',
+          [FDQuery.FieldByName('codigo').AsInteger,
+          FDQuery.FieldByName('descricao').AsString,
+          FDQuery.FieldByName('preco_venda').AsFloat]));
+        FDQuery.Next;
+      end;
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoLista(Response, JSonResult, 200);
+    except
+      on E: Exception do
+      begin
+        Mensagem := E.Message;
+        RetornaErro(Response, Mensagem, 500);
+        Handled := True;
+      end;
+    end;
+
+  finally
+    FDQuery.Free;
+    JSONResult.Free;
+  end;
+end;
+
+
+end.

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2024/09/13 11:13:00.000.939,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/13 11:25:49.000.090,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/13 11:29:46.000.590,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/13 11:35:25.000.962,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/15 09:34:12.000.177,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/16 20:28:41.000.403,=C:\Proj\RX12\Unit1.pas</Transaction>
+    <Transaction>2024/09/30 09:35:18.000.426,=C:\Proj\RX12\WebModuleUnit1.pas</Transaction>
+    <Transaction>2024/09/30 09:35:19.000.367,=C:\Proj\RX12\ServerConst1.pas</Transaction>
+    <Transaction>2024/09/30 09:40:16.000.683,C:\Proj\RX12\ServerConst1.pas=C:\Provas\WK Tecnology\ServidorRESTful\ServerConstPedido.pas</Transaction>
+    <Transaction>2024/09/30 09:40:23.000.416,C:\Proj\RX12\WebModuleUnit1.pas=C:\Provas\WK Tecnology\ServidorRESTful\WebModulePedido.pas</Transaction>
+    <Transaction>2024/09/30 09:40:23.000.416,C:\Proj\RX12\WebModuleUnit1.dfm=C:\Provas\WK Tecnology\ServidorRESTful\WebModulePedido.dfm</Transaction>
+    <Transaction>2024/09/30 09:40:40.000.232,C:\Proj\RX12\Project1.dproj=C:\Provas\WK Tecnology\ServidorRESTful\ServerPedido.dproj</Transaction>
+    <Transaction>2024/09/30 21:21:51.000.654,C:\Provas\WK Tecnology\ServidorRESTful\WebModulePedido.dfm=C:\Provas\WK Tecnology\ServidorRESTFul\UnitWmServerPedido.dfm</Transaction>
+    <Transaction>2024/09/30 21:21:51.000.654,C:\Provas\WK Tecnology\ServidorRESTful\WebModulePedido.pas=C:\Provas\WK Tecnology\ServidorRESTFul\UnitWmServerPedido.pas</Transaction>
+    <Transaction>2024/09/30 21:23:12.000.563,C:\Provas\WK Tecnology\ServidorRESTful\ServerConstPedido.pas=C:\Provas\WK Tecnology\ServidorRESTFul\ServerConstsPedido.pas</Transaction>
+  </Transactions>
+</BorlandProject>

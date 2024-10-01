@@ -1,0 +1,95 @@
+unit UnitFormClientPedidos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.WinXCtrls, System.Actions, Vcl.ActnList, System.ImageList, Vcl.ImgList;
+
+type
+  TFormClientPedidos = class(TForm)
+    Button1: TButton;
+    ActionList1: TActionList;
+    ActionListarPedidos: TAction;
+    ActionIncluirPedido: TAction;
+    Button2: TButton;
+    ImageList1: TImageList;
+    ActivityIndicator1: TActivityIndicator;
+    TimerActivity: TTimer;
+
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+
+    procedure ActionIncluirPedidoExecute(Sender: TObject);
+    procedure ActionListarPedidosExecute(Sender: TObject);
+    procedure TimerActivityTimer(Sender: TObject);
+
+  private
+    { Private declarations }
+
+  public
+    { Public declarations }
+
+  end;
+
+var
+  FormClientPedidos: TFormClientPedidos;
+
+implementation
+
+{$R *.dfm}
+
+uses UnitDMBaseAPI, UnitDMPedidoAPI, UnitFormIncluirPedido;
+
+{--------------------------------[ CONSTRUÇÃO ]--------------------------------}
+procedure TFormClientPedidos.FormCreate(Sender: TObject);
+begin
+  if not Assigned(dmBaseAPI) then
+  begin
+    dmBaseAPI := TdmBaseAPI.Create(nil);
+  end;
+end;
+
+procedure TFormClientPedidos.FormDestroy(Sender: TObject);
+begin
+  dmBaseAPI.Free;
+end;
+
+{---------------------------------[ INTERNO ]----------------------------------}
+procedure TFormClientPedidos.TimerActivityTimer(Sender: TObject);
+var
+  MensagemErro: String;
+begin
+  Self.TimerActivity.Enabled := False;
+  if dmBaseAPI.TestarConexao(MensagemErro) then
+  begin
+    Self.Button1.Visible := True;
+    Self.Button2.Visible := True;
+  end
+  else
+  begin
+    ShowMessage(MensagemErro);
+    Self.Close;
+  end;
+  Self.ActivityIndicator1.Animate := False;
+  Self.ActivityIndicator1.Visible := False;
+end;
+
+{----------------------------------[ AÇÃO ]------------------------------------}
+procedure TFormClientPedidos.ActionIncluirPedidoExecute(Sender: TObject);
+begin
+  if not Assigned(FormIncluirPedido) then
+  begin
+    FormIncluirPedido := TFormIncluirPedido.Create(nil);
+  end;
+  FormIncluirPedido.ShowModal;
+end;
+
+procedure TFormClientPedidos.ActionListarPedidosExecute(Sender: TObject);
+begin
+  ShowMessage('Listar pedido');
+end;
+
+
+end.

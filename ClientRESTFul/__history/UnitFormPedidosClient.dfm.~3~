@@ -1,0 +1,41 @@
+object FormPedidosClient: TFormPedidosClient
+  Left = 0
+  Top = 0
+  Caption = 'Pedidos Client 2024'
+  ClientHeight = 441
+  ClientWidth = 304
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  Position = poScreenCenter
+  TextHeight = 15
+  object Button1: TButton
+    Left = 54
+    Top = 64
+    Width = 197
+    Height = 154
+    Action = ActionIncluirPedidos
+    TabOrder = 0
+  end
+  object Button2: TButton
+    Left = 54
+    Top = 224
+    Width = 197
+    Height = 154
+    Action = ActionListarPedidos
+    TabOrder = 1
+  end
+  object ActionList1: TActionList
+    Left = 240
+    Top = 384
+    object ActionListarPedidos: TAction
+      Caption = 'Listar Pedidos'
+    end
+    object ActionIncluirPedidos: TAction
+      Caption = 'Incluir Pedidos'
+    end
+  end
+end

@@ -1,0 +1,35 @@
+#Download mysql
+https://dev.mysql.com/downloads/installer/
+
+Servidor 64bits
+Workbench
+Documentação
+Exemplos
+
+TCP/IP 
+Port: 3306
+X Protocol Port: 33060
+
+Use Strong Password Encryption for Authentication (RECOMENDED)
+M@Sql80390.2024
+M@Sql80390.2024
+
+Usuário: sispedido
+M@Ped80390.2024
+M@Ped80390.2024
+
+
+
+-----------------------------------
+
+
+---------------------------
+Debugger Exception Notification
+---------------------------
+Project ServerPedido.exe raised exception class EMySQLNativeException with message '[FireDAC][Phys][MySQL] Unknown database 'pedidosdb''.
+---------------------------
+Break   Continue   Copy   Help   
+---------------------------
+
+
+

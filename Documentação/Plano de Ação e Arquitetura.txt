@@ -1,0 +1,248 @@
+PLANO DE AÇÃO
+
+
+
+#BANCO DE DADOS MYSQL 5.6
+
+Criação e estruturação de tabelas:
+1. Criar as tabelas de clientes, produtos, pedidos dados gerais e pedidos produtos utilizando comandos SQL diretamente no Workbench.
+2. Criar as chaves primárias e chaves estrangeiras (FKs) entre as tabelas.
+3. Definir índices nas tabelas de pedidos e produtos.
+
+Popular tabelas com dados:
+1. Inserir os 20 registros ou mais nas tabelas de clientes e produtos usando comandos INSERT INTO.
+
+Controle sequencial do número de pedidos:
+1. Configurar o campo Número do Pedido como AUTO_INCREMENT para garantir que o número dos pedidos seja sequencial e não duplicado.
+
+Transações e tratamento de erros:
+1. Executar transações manualmente no Workbench utilizando comandos como START TRANSACTION, COMMIT e ROLLBACK para gerenciar a integridade dos dados.
+
+Criação de FKs e índices:
+1. Adicionar Foreign Keys e Índices diretamente ao criar tabelas via comandos SQL.
+
+DUMP do banco de dados:
+1. Exportar ou Importar o banco de dados
+2. Realizar o Dump do banco de dados (Exportação) e restaurá-lo (Importação) também pode ser feito diretamente no MySQL Workbench.
+
+
+
+#Ações que não podem ser feitas diretamente no MySQL Workbench:
+-> Tarefas que envolvem interações programáticas
+1. Construção e integração das camadas MVC
+2. Configuração dinâmica de acesso ao banco via arquivo .ini.
+3. Limitado a não usar componentes de terceiros.
+   Em vez disso usar componentes nativos como:
+   1. FireDAC (Model)
+   2. VCL ou FMX (View)
+   3. Webbroker (Controller)
+4. Distribuição e operação 
+   Disponibilizar a biblioteca do banco de dados junto com a aplicação.
+   
+
+
+#SERVIDOR
+
+Model (Manipulação de dados):
+Inserir, atualizar, excluir clientes, produtos, pedidos e itens.
+Calcular valor total do pedido.
+
+Controller (Intermediário):
+Receber os comandos do usuário (inserir, modificar, excluir itens).
+Delegar ao Model as operações de inserção, exclusão e atualização.
+Atualizar a View com os resultados processados.
+Vantagens dessa abordagem MVC:
+Separação de responsabilidades: Cada parte do código (dados, interface, lógica) está bem separada, facilitando a manutenção e expansão.
+Reutilização de código: O Model pode ser reutilizado em várias partes do sistema.
+Facilidade de teste: Testar cada camada de forma isolada é mais simples.
+
+
+
+#CLIENTE
+Interface para pedidos:
+1. Input de cliente e produtos: O operador deve informar o cliente e os produtos manualmente, sem necessidade de desenvolver cadastros.
+2. Grid de produtos: Implementar um grid para exibir código do produto, descrição, quantidade, preço unitário e total.
+3. Botão de inserção no grid: Adicionar um botão que insere o produto digitado no grid para visualização.
+
+Navegação no grid:
+1. Permitir a navegação com as setas para cima e para baixo no grid de produtos.
+2. Implementar a funcionalidade de edição ao pressionar ENTER sobre um produto, permitindo modificar a quantidade e o valor unitário.
+
+Exclusão de produtos:
+1. Ao pressionar DEL, o produto selecionado deve ser excluído, com uma confirmação do operador.
+
+Total do pedido:
+1. Exibir no rodapé da tela o valor total acumulado do pedido conforme os produtos são inseridos.
+
+Botão Gravar Pedido:
+1. Gravar as informações do pedido e seus produtos nas respectivas tabelas ao pressionar o botão de gravação.
+
+Função de carregar pedidos já gravados:
+1. Criar um botão para carregar pedidos antigos, com base no número do pedido.
+
+Função de cancelar pedidos:
+1. Criar um botão que permite apagar um pedido já gravado, removendo os dados de ambas as tabelas.
+
+
+
+ARQUITETURA MVC - Servidor embutido (Monólito)
+1. Model (Modelo)
+   O Model é responsável por representar os dados e as regras de negócios.
+   Ele contém a lógica de manipulação dos dados e interage com o banco de dados.
+
+   Ações do Model:
+   Gerenciar os dados dos clientes, produtos, pedidos e itens de pedido.
+   Realizar consultas, inserções, atualizações e exclusões no banco de dados.
+   Calcular o valor total do pedido.
+
+2. View (Visão)
+   A View é responsável por apresentar os dados ao usuário e capturar a interação dele com a interface.
+   Aqui, a lógica de exibição da tela, grids e formulários entra em ação.
+
+   Ações da View:
+   Exibir a interface de criação e edição de pedidos.
+   Exibir os clientes e produtos em grids ou combos para seleção.
+   Mostrar o grid de itens do pedido, permitindo que o usuário navegue e modifique os itens.
+   Atualizar o valor total do pedido na tela.
+
+3. Controller (Controlador)
+   O Controller é o intermediário entre a View e o Model.
+   Ele recebe as entradas do usuário (eventos como cliques e inserções), processa essas informações, interage com o Model para modificar os dados, e então atualiza a View com os resultados.
+
+   Ações do Controller:
+   Controlar a criação de novos pedidos.
+   Gerenciar a adição e exclusão de itens no pedido.
+   Atualizar o valor total do pedido conforme os itens são inseridos ou alterados.
+   Salvar o pedido no banco de dados.
+
+
+Ações por canal:
+1. Model (Manipulação de dados):
+   Inserir, atualizar, excluir clientes, produtos, pedidos e itens.
+   Calcular valor total do pedido.
+
+2. View (Interface com o usuário):
+   Exibir formulário de pedidos e capturar as interações do usuário.
+   Exibir e atualizar grids de produtos e itens de pedidos.
+   Mostrar o valor total do pedido.
+
+3. Controller (Intermediário):
+   Receber os comandos do usuário (inserir, modificar, excluir itens).
+   Delegar ao Model as operações de inserção, exclusão e atualização.
+   Atualizar a View com os resultados processados.
+   Vantagens dessa abordagem MVC:
+   Separação de responsabilidades: Cada parte do código (dados, interface, lógica) está bem separada, facilitando a manutenção e expansão.
+   Reutilização de código: O Model pode ser reutilizado em várias partes do sistema.
+   Facilidade de teste: Testar cada camada de forma isolada é mais simples.
+
+
+
+Distribuição MVC
+MVC distribuído, onde o Model e parte do Controller ficam no servidor, e a View no cliente, conectados por APIs.
+
+1. Model: Gerenciamento de dados (clientes, produtos, pedidos, itens de pedido).
+   Controller (parte): Manipulação de requisições HTTP, chamada de métodos do Model e respostas das solicitações.
+   Tecnologia aplicada Delphi com Firedac, VCL e WebBroker para criar essa API.
+
+2. Frontend (Cliente) - Interface do Usuário
+   A View ficará separada, sendo responsável apenas pela interface do usuário e a interação.
+   Ela faz requisições ao backend por meio de APIs e exibe os dados ao usuário.
+
+   Ações da View no cliente:
+   a. Exibir a interface gráfica (formulários, grids, botões).
+   b. Fazer requisições HTTP ao servidor para obter ou enviar dados.
+   c. Atualizar a interface conforme os dados recebidos do servidor.
+   d. Usar Delphi VCL ou FMX para criar o frontend, utilizando componentes como TRESTClient, TRESTRequest e TRESTResponse para consumir as APIs criadas no servidor.
+
+3. Backend (Servidor) - API REST
+   O backend será responsável pelo Model e parte do Controller, expondo a lógica de negócios através de APIs. 
+   O backend será um serviço independente que realiza as operações de banco de dados e lógica de negócios.
+
+
+
+4. Comunicação entre Frontend e Backend
+   A comunicação entre o frontend (View) e o backend (Model e parte do Controller) ser
+
+   Vantagens de separar o servidor em umá feita por requisições HTTP (GET, POST, PUT, DELETE).
+   O backend retorna dados no formato JSON ou XML, e o frontend consome esses dados e exibe para o usuário. aplicativo à parte:
+
+   Escalabilidade: O backend pode ser escalado independentemente do frontend.
+   Manutenção: Alterações no backend não afetam diretamente o frontend, e vice-versa.
+   Desenvolvimento independente: Diferentes equipes podem trabalhar separadamente no frontend e no backend.
+   Reutilização: O backend pode ser utilizado por diferentes clientes (aplicativo desktop, mobile, web).
+   Segurança: O backend pode ser protegido por autenticação e autorização, limitando o acesso direto ao banco de dados.
+   Arquitetura resultante:
+   Frontend: Aplicação cliente responsável pela interface (Delphi, Web, ou Mobile).
+   Backend: Servidor que gerencia as regras de negócios e a interação com o banco de dados.
+   Comunicação: APIs RESTful (ou outro tipo de serviço) entre o frontend e backend.
+
+
+5. Backend (Servidor)
+   No backend, que agora gerencia os dados e a lógica de negócios, as principais ações de programação envolvem a manipulação direta dos dados e o gerenciamento de transações. O Model e a parte do Controller responsável pela lógica de negócios ficam concentrados no backend.
+
+   Ações do Backend (Model + Parte do Controller):
+   Model: Manipulação de dados (CRUD de clientes, produtos, pedidos e itens de pedido).
+   Controller: Lida com as requisições HTTP (REST APIs) e a lógica de negócio.
+   Criar, listar, atualizar e excluir clientes, produtos e pedidos.
+   Calcular o valor total dos pedidos.
+   Gerenciar transações e tratamento de erros.
+   Verificar regras de negócio (exemplo: impedir que pedidos sejam gravados sem itens).
+   Exemplo de Separação de Ações no Backend:
+   Requisição GET para listar pedidos:
+   Model: Consulta no banco de dados para retornar a lista de pedidos.
+   Controller: Responde à requisição HTTP com os dados em formato JSON.
+   Requisição POST para inserir pedido:
+   Controller: Recebe os dados do frontend e passa ao Model.
+   Model: Insere o pedido no banco e calcula o valor total.
+   Controller: Retorna uma confirmação ao frontend.
+
+6. Estrutura do Backend:
+   Rotas HTTP (Controller): Define os endpoints para operações como /pedidos, /produtos, etc.
+   Model (Lógica de Negócios): Responsável por interagir com o banco de dados e aplicar as regras de negócio.
+   Banco de Dados: A camada de persistência onde os dados realmente residem.
+
+7. Frontend (Cliente)
+   O frontend lida com a View e a parte do Controller que gerencia as interações do usuário. Ele consome as APIs do backend para recuperar, atualizar e gravar os dados, e exibe esses dados ao usuário.
+
+   Ações do Frontend (View + Parte do Controller):
+   View: Exibe a interface gráfica para o usuário, como formulários, grids, botões, etc.
+   Controller (parte): Gerencia a interação do usuário (cliques, inputs, navegação) e faz chamadas ao backend.
+   Enviar requisições HTTP ao backend para listar, criar, atualizar ou excluir clientes, produtos e pedidos.
+   Manipular o grid de pedidos com base nos dados retornados pelo backend.
+   Exibir e atualizar o valor total do pedido conforme os itens são adicionados ou removidos.
+   Exemplo de Separação de Ações no Frontend:
+   Requisição para listar produtos e exibir no grid:
+   Controller: Faz uma requisição GET para a API do backend e recebe os dados.
+   View: Exibe os produtos no grid.
+   Inserir um novo item no pedido:
+   Controller: Envia uma requisição POST ao backend com os detalhes do item.
+   View: Atualiza o grid com o item inserido.
+
+8. Estrutura do Frontend:
+   View (Interface): Exibe as telas, grids e formulários, capturando os inputs dos usuários.
+   Controller: Faz requisições para o backend e manipula a exibição dos dados.
+   Comunicação com Backend: Utiliza APIs para interagir com o servidor, onde a lógica de negócios é gerenciada.
+
+9. Comunicação entre Frontend e Backend (API REST)
+   A comunicação entre frontend e backend é feita por meio de APIs REST, geralmente utilizando requisições HTTP para enviar e receber dados. O frontend envia requisições (GET, POST, PUT, DELETE) ao backend, que processa e retorna os resultados (geralmente em JSON).
+
+   Exemplo de Comunicação:
+   Frontend envia: GET /api/pedidos ? Backend responde: [ { "id": 1, "cliente": "João", "valor_total": 150.00 }, ... ]
+   Frontend envia: POST /api/pedidos com dados do pedido ? Backend responde: {"mensagem": "Pedido criado com sucesso", "id": 123}
+   Como fica a separação de ações:
+   Backend (Servidor):
+
+   Contém o Model (manipulação de dados) e a lógica de negócios.
+   Exposição de APIs REST para operações de CRUD (Create, Read, Update, Delete).
+   Controller no servidor gerencia as requisições HTTP e retorna os dados necessários ao frontend.
+   
+10. Frontend (Cliente):
+   A View (interface) e parte do Controller que lida com as interações do usuário.
+   O frontend é responsável por consumir as APIs do backend e exibir os dados.
+   Ações como listar produtos, adicionar itens ao pedido e calcular o total são gerenciadas aqui, mas a lógica principal está no servidor.
+   
+11. Vantagens dessa separação:
+   Manutenção mais simples: O backend e o frontend podem ser atualizados de forma independente.
+   Escalabilidade: O backend pode ser escalado conforme o número de clientes aumenta.
+   Flexibilidade: Você pode usar diferentes tecnologias no backend e frontend (por exemplo, um frontend Delphi, web ou mobile).
+   Segurança: O backend pode ser protegido com autenticação e controle de acesso, sem expor diretamente o banco de dados.

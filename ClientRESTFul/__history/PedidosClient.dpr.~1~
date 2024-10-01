@@ -1,0 +1,18 @@
+program PedidosClient;
+
+uses
+  Vcl.Forms,
+  UnitFormPedidosClient in 'UnitFormPedidosClient.pas' {FormPedidosClient},
+  Vcl.Themes,
+  Vcl.Styles;
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.Title := 'Pedidos Client';
+  TStyleManager.TrySetStyle('Windows11 Impressive Light');
+  Application.CreateForm(TFormPedidosClient, FormPedidosClient);
+  Application.Run;
+end.

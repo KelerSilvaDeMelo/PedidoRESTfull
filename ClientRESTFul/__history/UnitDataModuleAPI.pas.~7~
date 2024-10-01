@@ -1,0 +1,98 @@
+unit UnitDataModuleAPI;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, System.IniFiles, IdHTTP, IdSSLOpenSSL, Vcl.Dialogs, ClientConstsPedido;
+
+type
+  TDataModuleAPI = class(TDataModule)
+    procedure DataModuleCreate(Sender: TObject);
+
+  private
+    FServerHost: string;
+    FServerPort: string;
+
+  private
+    procedure ConectaAPI;
+    procedure LerConfigIni;
+    procedure ConfigurarHTTPClient(HTTPClient: TIdHTTP; SSLHandler: TIdSSLIOHandlerSocketOpenSSL);
+
+  public
+    procedure TestarConexao;
+  end;
+
+var
+  DataModuleAPI: TDataModuleAPI;
+
+implementation
+
+{%CLASSGROUP 'Vcl.Controls.TControl'}
+
+{$R *.dfm}
+
+{--------------------------------[ CONSTRUÇÃO ]--------------------------------}
+procedure TDataModuleAPI.DataModuleCreate(Sender: TObject);
+begin
+  Self.ConectaAPI;
+end;
+
+{---------------------------------[ PRIVADO ]----------------------------------}
+procedure TDataModuleAPI.ConectaAPI;
+begin
+  Self.LerConfigIni;
+end;
+
+{ Ler as configurações do arquivo client_config.ini }
+procedure TDataModuleAPI.LerConfigIni;
+var
+  Ini: TIniFile;
+  ConfigFilePath: string;
+begin
+  ConfigFilePath := ExtractFilePath(ParamStr(0)) + 'client_config.ini';
+  Ini := TIniFile.Create(ConfigFilePath);
+  try
+    if not FileExists(ConfigFilePath) then
+    begin
+      Ini.WriteString('Servidor', 'Host', BASE_HOST);
+      Ini.WriteString('Servidor', 'Porta', BASE_PORT);
+    end;
+
+    Self.FServerHost := Ini.ReadString('Servidor', 'Host', BASE_HOST);
+    Self.FServerPort := Ini.ReadString('Servidor', 'Porta', BASE_PORT);
+  finally
+    Ini.Free;
+  end;
+end;
+
+{ Configura o HTTP client para comunicação }
+procedure TDataModuleAPI.ConfigurarHTTPClient(HTTPClient: TIdHTTP; SSLHandler: TIdSSLIOHandlerSocketOpenSSL);
+begin
+  HTTPClient := TIdHTTP.Create(nil);
+  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  HTTPClient.IOHandler := FSSLHandler;
+end;
+
+{ Testa a conexão com o servidor }
+procedure TDataModuleAPI.TestarConexao;
+var
+  HTTPClient: TIdHTTP;
+  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  Url: string;
+  Resposta: string;
+begin
+  ConfigurarHTTPClient(HTTPClient, SSLHandler);
+
+  Url := Format('http://%s:%s/', [FServerHost, FServerPort]);
+
+  try
+    Resposta := FHTTPClient.Get(Url);
+    ShowMessage('Servidor conectado com sucesso: ' + Resposta);
+  except
+    on E: Exception do
+      ShowMessage('Erro ao conectar com o servidor de aplicação: ' + E.Message);
+  end;
+end;
+
+end.
+

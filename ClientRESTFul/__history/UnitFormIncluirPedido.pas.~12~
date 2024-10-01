@@ -1,0 +1,70 @@
+unit UnitFormIncluirPedido;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, UnitDMPedidoAPI, Data.DB, Vcl.DBCtrls,
+  Vcl.StdCtrls, Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  FireDAC.Stan.StorageBin;
+
+type
+  TFormIncluirPedido = class(TForm)
+    Label1: TLabel;
+    DBLookupComboBox1: TDBLookupComboBox;
+    dsClientes: TDataSource;
+    mtPedidoCapa: TFDMemTable;
+    mtPedidoItens: TFDMemTable;
+    dsCapa: TDataSource;
+    dsItens: TDataSource;
+
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    procedure NovoPedido;
+  end;
+
+var
+  FormIncluirPedido: TFormIncluirPedido;
+
+implementation
+
+{$R *.dfm}
+
+{--------------------------------[ CONSTRUÇÃO ]--------------------------------}
+procedure TFormIncluirPedido.FormCreate(Sender: TObject);
+begin
+  if not Assigned(dmPedidoAPI) then
+  begin
+    dmPedidoAPI := TdmPedidoAPI.Create(nil);
+  end;
+
+  dmPedidoAPI.ListarClientes;
+  dmPedidoAPI.ListarProdutos;
+  dmPedidoAPI.ListarPedidos;
+end;
+
+procedure TFormIncluirPedido.FormDestroy(Sender: TObject);
+begin
+  dmPedidoAPI.Free;
+end;
+
+{----------------------------------[ PUBICO ]----------------------------------}
+procedure TFormIncluirPedido.NovoPedido;
+begin
+  Self.mtPedidoCapa.Close;
+  Self.mtPedidoCapa.CreateDataSet;
+
+  Self.mtPedidoCapa.Append;
+
+  Self.mtPedidoItens.Close;
+  Self.mtPedidoItens.CreateDataSet;
+end;
+
+end.

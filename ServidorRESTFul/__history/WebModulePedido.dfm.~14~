@@ -1,0 +1,57 @@
+object WebModule1: TWebModule1
+  OnCreate = WebModuleCreate
+  OnDestroy = WebModuleDestroy
+  Actions = <
+    item
+      Default = True
+      Name = 'DefaultHandler'
+      PathInfo = '/'
+      OnAction = WebModule1DefaultHandlerAction
+    end
+    item
+      MethodType = mtGet
+      Name = 'ListarPedidos'
+      OnAction = WebModule1ListarPedidosAction
+    end
+    item
+      MethodType = mtPost
+      Name = 'InserirPedido'
+      OnAction = WebModule1InserirPedidoAction
+    end
+    item
+      MethodType = mtGet
+      Name = 'ListarProdutos'
+      OnAction = WebModule1ListarProdutosAction
+    end
+    item
+      MethodType = mtPost
+      Name = 'InserirPedidoItem'
+      OnAction = WebModule1InserirPedidoItemAction
+    end>
+  Height = 230
+  Width = 519
+  object FDConnection1: TFDConnection
+    Params.Strings = (
+      'DriverID=MySQL')
+    Left = 48
+    Top = 24
+  end
+  object FDPhysMySQLDriverLink1: TFDPhysMySQLDriverLink
+    VendorLib = 'C:\Provas\WK Tecnology\ServidorRESTful\Win64\Debug\libmysql.dll'
+    Left = 176
+    Top = 24
+  end
+  object FDScriptCriaPedidoDB: TFDScript
+    SQLScripts = <
+      item
+        Name = 'CriaPedidosDB'
+        SQL.Strings = (
+          'DROP DATABASE IF EXISTS pedidosDB;')
+      end>
+    Connection = FDConnection1
+    Params = <>
+    Macros = <>
+    Left = 320
+    Top = 24
+  end
+end

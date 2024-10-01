@@ -1,0 +1,43 @@
+unit UnitFormPedidosClient;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.WinXCtrls, System.Actions, Vcl.ActnList, System.ImageList, Vcl.ImgList;
+
+type
+  TFormPedidosClient = class(TForm)
+    Button1: TButton;
+    ActionList1: TActionList;
+    ActionListarPedidos: TAction;
+    ActionIncluirPedido: TAction;
+    Button2: TButton;
+    ImageList1: TImageList;
+    procedure ActionIncluirPedidoExecute(Sender: TObject);
+    procedure ActionListarPedidosExecute(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  FormPedidosClient: TFormPedidosClient;
+
+implementation
+
+{$R *.dfm}
+
+procedure TFormPedidosClient.ActionIncluirPedidoExecute(Sender: TObject);
+begin
+  ShowMessage('Incluir pedido.');
+end;
+
+procedure TFormPedidosClient.ActionListarPedidosExecute(Sender: TObject);
+begin
+  ShowMessage('Listar pedido');
+end;
+
+end.
