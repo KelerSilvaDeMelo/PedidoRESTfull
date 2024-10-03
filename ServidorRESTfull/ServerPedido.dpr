@@ -10,7 +10,8 @@ uses
   Web.WebReq,
   Web.WebBroker,
   UnitWmServerPedido in 'UnitWmServerPedido.pas' {wmServerPedido: TWebModule},
-  ServerConstsPedido in 'ServerConstsPedido.pas';
+  ServerConstsPedido in 'ServerConstsPedido.pas',
+  ServerConstsSQL in 'ServerConstsSQL.pas';
 
 {$R *.res}
 

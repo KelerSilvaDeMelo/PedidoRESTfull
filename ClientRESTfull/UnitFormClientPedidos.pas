@@ -40,20 +40,20 @@ implementation
 
 {$R *.dfm}
 
-uses UnitDMBaseAPI, UnitDMPedidoAPI, UnitFormIncluirPedido, UnitFormListarPedidos;
+uses UnitDMBaseAPI, UnitFormIncluirPedido, UnitFormListarPedidos;
 
 {--------------------------------[ CONSTRUÇÃO ]--------------------------------}
 procedure TFormClientPedidos.FormCreate(Sender: TObject);
 begin
-  if not Assigned(dmBaseAPI) then
+  if not Assigned(dmGlobalAPI) then
   begin
-    dmBaseAPI := TdmBaseAPI.Create(nil);
+    dmGlobalAPI := TdmBaseAPI.Create(nil);
   end;
 end;
 
 procedure TFormClientPedidos.FormDestroy(Sender: TObject);
 begin
-  dmBaseAPI.Free;
+  dmGlobalAPI.Free;
 end;
 
 {---------------------------------[ INTERNO ]----------------------------------}
@@ -62,7 +62,7 @@ var
   MensagemErro: String;
 begin
   Self.TimerActivity.Enabled := False;
-  if dmBaseAPI.TestarConexao(MensagemErro) then
+  if dmGlobalAPI.TestarConexao(MensagemErro) then
   begin
     Self.Button1.Visible := True;
     Self.Button2.Visible := True;
@@ -78,22 +78,43 @@ end;
 
 {----------------------------------[ AÇÃO ]------------------------------------}
 procedure TFormClientPedidos.ActionIncluirPedidoExecute(Sender: TObject);
+var
+  CriaPedido: TFormIncluirPedido;
+  MensagemDeErro: String;
 begin
-  if not Assigned(FormIncluirPedido) then
-  begin
-    FormIncluirPedido := TFormIncluirPedido.Create(nil);
+  CriaPedido := TFormIncluirPedido.Create(nil);
+  try
+    if CriaPedido.Preparado(MensagemDeErro) then
+    begin
+      CriaPedido.ShowModal;
+    end
+    else
+    begin
+      MessageDlg(MensagemDeErro, TMsgDlgType.mtError, [mbOK], 0)
+    end;
+  finally
+    CriaPedido.Free;
   end;
-  FormIncluirPedido.NovoPedido;
-  FormIncluirPedido.ShowModal;
 end;
 
 procedure TFormClientPedidos.ActionListarPedidosExecute(Sender: TObject);
+var
+  ListarPedido: TFormListarPedidos;
+  MensagemDeErro: String;
 begin
-  if not Assigned(FormListarPedidos) then
-  begin
-    FormListarPedidos := TFormListarPedidos.Create(nil);
+  ListarPedido := TFormListarPedidos.Create(nil);
+  try
+    if ListarPedido.Preparado(MensagemDeErro) then
+    begin
+      ListarPedido.ShowModal;
+    end
+    else
+    begin
+      MessageDlg(MensagemDeErro, TMsgDlgType.mtError, [mbOK], 0)
+    end;
+  finally
+    ListarPedido.Free;
   end;
-  FormListarPedidos.ShowModal;
 end;
 
 

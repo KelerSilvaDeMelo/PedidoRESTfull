@@ -4,135 +4,261 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
-  System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, UnitDMPedidoAPI, Data.DB, Vcl.DBCtrls,
-  Vcl.StdCtrls, Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option,
-  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
-  FireDAC.DApt.Intf, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
-  FireDAC.Stan.StorageBin, Vcl.WinXPickers, Vcl.Mask, Vcl.ExtCtrls;
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  UnitDMPedidoClient, Data.DB, Vcl.DBCtrls, Vcl.StdCtrls, Vcl.Grids,
+  Vcl.DBGrids, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
+  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
+  FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.Stan.StorageBin,
+  Vcl.WinXPickers, Vcl.Mask, Vcl.ExtCtrls, System.Actions, Vcl.ActnList;
 
 type
   TFormIncluirPedido = class(TForm)
-    Label1: TLabel;
-    DBLookupComboBox1: TDBLookupComboBox;
     dsClientes: TDataSource;
-    mtPedidoCapa: TFDMemTable;
-    mtPedidoItens: TFDMemTable;
-    dsCapa: TDataSource;
-    dsItens: TDataSource;
-    DatePicker1: TDatePicker;
-    Label2: TLabel;
-    Label3: TLabel;
-    DBGrid1: TDBGrid;
-    mtPedidoItensid_pedido_item: TFDAutoIncField;
-    mtPedidoItensnumero_pedido_item: TIntegerField;
-    mtPedidoItenscodigo_produto_pedido_item: TIntegerField;
-    mtPedidoItensquantidade_pedido_item: TBCDField;
-    mtPedidoItensvalor_unitario_pedido_item: TBCDField;
-    mtPedidoItensvalor_total_pedido_item: TBCDField;
-    mtPedidoCapanumero_pedido: TFDAutoIncField;
-    mtPedidoCapacodigo_cliente: TIntegerField;
-    mtPedidoCapadata_emissao_pedido: TDateField;
-    mtPedidoCapavalor_total_pedido: TBCDField;
-    Label4: TLabel;
-    DBEdit1: TDBEdit;
+    dsPedidoCapa: TDataSource;
+    dsPedidoItens: TDataSource;
+    gridItens: TDBGrid;
+    lbTotal: TLabel;
+    edtTotal: TDBEdit;
     Button1: TButton;
+    lbCliente: TLabel;
+    lcbCliente: TDBLookupComboBox;
+    lbDataEmissao: TLabel;
+    dpData: TDatePicker;
+    lbProduto: TLabel;
+    edProduto: TDBEdit;
+    lcbProduto: TDBLookupComboBox;
+    lbQuantidade: TLabel;
+    edtQuantidade: TDBEdit;
+    lbValor: TLabel;
+    edtValor: TDBEdit;
+    Button2: TButton;
+    ActionList1: TActionList;
+    dsProdutos: TDataSource;
+    dsPedidoItem: TDataSource;
+    ActionIncluirItem: TAction;
+    ActionConfirmarPedido: TAction;
+    lbRegistros: TLabel;
 
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure mtPedidoItensNewRecord(DataSet: TDataSet);
-    procedure mtPedidoCapaNewRecord(DataSet: TDataSet);
-    procedure mtPedidoItensquantidade_pedido_itemChange(Sender: TField);
+
+    procedure ActionIncluirItemExecute(Sender: TObject);
+    procedure gridItensColExit(Sender: TObject);
+    procedure gridItensKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure gridItensCellClick(Column: TColumn);
+    procedure gridItensKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure ActionConfirmarPedidoExecute(Sender: TObject);
+    procedure edProdutoExit(Sender: TObject);
+
+  private
+    { Private symbols }
+    FPedidoClient: TdmPedidoClient;
+    FPreparado: Boolean;
+
   private
     { Private declarations }
+    procedure ContaRegistros;
+    procedure ApagaItemPosicionado;
+    function ValidaIncluirItem: Boolean;
+    function IncluiItem: Boolean;
+
   public
     { Public declarations }
-    procedure NovoPedido;
-  end;
+    function Preparado(var MensagemDeErro: String): Boolean;
 
-var
-  FormIncluirPedido: TFormIncluirPedido;
+  end;
 
 implementation
 
 {$R *.dfm}
 
-{--------------------------------[ CONSTRUÇÃO ]--------------------------------}
+uses ClientConstsPedido;
+
+{ --------------------------------[ CONSTRUÇÃO ]-------------------------------- }
 procedure TFormIncluirPedido.FormCreate(Sender: TObject);
 begin
-  if not Assigned(dmPedidoAPI) then
-  begin
-    dmPedidoAPI := TdmPedidoAPI.Create(nil);
-  end;
-
-  dmPedidoAPI.ListarClientes;
-  dmPedidoAPI.ListarProdutos;
-  dmPedidoAPI.ListarPedidos;
-  dmPedidoAPI.ListarItensDoPedido;
+  Self.FPreparado := False;
+  Self.FPedidoClient := TdmPedidoClient.Create(nil);
 end;
 
 procedure TFormIncluirPedido.FormDestroy(Sender: TObject);
 begin
-  dmPedidoAPI.Free;
+  Self.FPedidoClient.Free;
 end;
 
-procedure TFormIncluirPedido.mtPedidoCapaNewRecord(DataSet: TDataSet);
+{ ---------------------------------[ INTERNO ]---------------------------------- }
+procedure TFormIncluirPedido.gridItensCellClick(Column: TColumn);
 begin
-  Self.mtPedidoCapadata_emissao_pedido.AsDateTime := Date;
-  Self.mtPedidoCapadata_emissao_pedido.AsCurrency := 0.00
+  Self.ContaRegistros;
+  Self.FPedidoClient.RecalculaTotais;
 end;
 
-procedure TFormIncluirPedido.mtPedidoItensNewRecord(DataSet: TDataSet);
+procedure TFormIncluirPedido.gridItensColExit(Sender: TObject);
 begin
-  // Self.mtPedidoItensid_pedido_item.Value
-  Self.mtPedidoItensquantidade_pedido_item.Value := 0;
-  Self.mtPedidoItensvalor_unitario_pedido_item.Value := 0;
-  Self.mtPedidoItensvalor_total_pedido_item.Value := 0;
+  Self.ContaRegistros;
+  Self.FPedidoClient.RecalculaTotais;
 end;
 
-
-procedure TFormIncluirPedido.mtPedidoItensquantidade_pedido_itemChange(
-  Sender: TField);
-var
-  Marcador: TBookmark;
-  Valor: Currency;
+procedure TFormIncluirPedido.gridItensKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
 begin
-
-  Valor := 0.00;
-  Self.mtPedidoItensvalor_total_pedido_item.Value := Self.mtPedidoItensvalor_unitario_pedido_item.Value * Self.mtPedidoItensquantidade_pedido_item.Value;
-
-  Marcador := Self.mtPedidoItens.Bookmark;
-
-  Self.mtPedidoItens.DisableControls;
-  Self.mtPedidoItens.First;
-  while not Self.mtPedidoItens.Eof do
+  if (Key = VK_DELETE) and (ssCtrl in Shift) then
   begin
-    Valor := Valor + Self.mtPedidoItensvalor_total_pedido_item.AsCurrency;
-    Self.mtPedidoItens.Next;
+    // Anula a combinação CTRL+DELETE
+    Key := 0;
+    Exit;
   end;
-
-  Self.mtPedidoItens.GotoBookmark(Marcador);
-  Self.mtPedidoItens.Edit;
-
-  Self.mtPedidoCapa.Edit;
-  Self.mtPedidoCapavalor_total_pedido.AsCurrency := Valor;
-
-  Self.mtPedidoItens.EnableControls;
 end;
 
-
-{----------------------------------[ PUBICO ]----------------------------------}
-procedure TFormIncluirPedido.NovoPedido;
+procedure TFormIncluirPedido.gridItensKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
 begin
-  Self.mtPedidoCapa.Close;
-  Self.mtPedidoCapa.CreateDataSet;
-  Self.mtPedidoCapa.Append;
-
-  Self.DatePicker1.Date := Date;
-
-  Self.mtPedidoItens.Close;
-  Self.mtPedidoItens.CreateDataSet;
-
+  case Key of
+    VK_DELETE:
+      Self.ApagaItemPosicionado;
+    VK_DOWN, VK_UP:
+      begin
+        Self.ContaRegistros;
+        Self.FPedidoClient.RecalculaTotais;
+      end
+  end;
 end;
+
+procedure TFormIncluirPedido.edProdutoExit(Sender: TObject);
+begin
+end;
+
+
+{ ----------------------------------[ AÇÃO ]---------------------------------- }
+procedure TFormIncluirPedido.ActionConfirmarPedidoExecute(Sender: TObject);
+var
+  DataDaEmissao: TDate;
+  Mensagem, MensagemDeErro, SequenciaDoPedido: String;
+begin
+  DataDaEmissao := Self.dpData.Date;
+  Mensagem := FN_GRAVA_PEDIDO;
+  MensagemDeErro := MSG_ERRO_GRAVAR_PEDIDO;
+  if Self.FPedidoClient.EnviaNovoPedido(DataDaEmissao, MensagemDeErro) then
+  begin
+    SequenciaDoPedido := Self.FPedidoClient.pcSequencia.AsString;
+    Mensagem := Mensagem + #13#10 + 'Sequência do pedido: ' + SequenciaDoPedido;
+    MessageDlg(Mensagem, TMsgDlgType.mtInformation, [mbOK], 0);
+    Self.Close;
+  end
+  else
+  begin
+    MessageDlg(MensagemDeErro, TMsgDlgType.mtInformation, [mbOK], 0);
+  end;
+end;
+
+procedure TFormIncluirPedido.ActionIncluirItemExecute(Sender: TObject);
+begin
+  if Self.ValidaIncluirItem then
+    Self.IncluiItem;
+end;
+
+{ ---------------------------------[ PRIVATE ]-------------------------------- }
+procedure TFormIncluirPedido.ContaRegistros;
+var
+  Contagem: Integer;
+  Registros: String;
+begin
+  Contagem := Self.gridItens.DataSource.DataSet.RecordCount;
+  Registros := Contagem.ToString;
+  Self.lbRegistros.Caption := Registros + ' Registro(s)';
+
+  Self.gridItens.Enabled := (Contagem > 0);
+end;
+
+procedure TFormIncluirPedido.ApagaItemPosicionado;
+var
+  Mensagem: String;
+begin
+  if gridItens.DataSource.DataSet.IsEmpty then
+  begin
+    Mensagem := FN_LISTA_VAZIA;
+    MessageDlg(Mensagem, TMsgDlgType.mtInformation, [mbOK], 0)
+  end
+  else
+  begin
+    Mensagem := FN_APAGAR_REGISTRO;
+    if MessageDlg(Mensagem, TMsgDlgType.mtConfirmation, mbOKCancel, 0) = mrOk then
+    begin
+      Self.FPedidoClient.ApagaItemPosicionado;
+      Self.ContaRegistros;
+    end;
+  end;
+end;
+
+function TFormIncluirPedido.ValidaIncluirItem: Boolean;
+var
+  Controle: TLabel;
+begin
+  Controle := nil;
+  Result := True;
+
+  // Cliente
+  if Self.lcbCliente.Field.IsNull then
+    Controle := Self.lbCliente
+  else
+  // Regra Data de Emissão
+  if Self.dpData.Date < Date then
+    Controle := Self.lbDataEmissao
+  else
+  // Preenchimento do campo Código do Produto
+  if Self.edProduto.Field.IsNull then
+    Controle := Self.lbProduto
+  else
+  // Produto não existe
+  if not Self.FPedidoClient.ProdutoExiste then
+    Controle := Self.lbProduto
+  else
+  // Preenchimento do campo Quantidade
+  if Self.edtQuantidade.Field.IsNull then
+    Controle := Self.lbQuantidade
+  else
+  // Quantidade positiva
+  if Self.edtQuantidade.Field.AsInteger <= 0 then
+    Controle := Self.lbQuantidade
+  else
+  // Preenchimento do campo Valor
+  if Self.edtValor.Field.IsNull then
+    Controle := Self.lbValor
+  else
+  // Valor positivo
+  if Self.edtValor.Field.AsCurrency <= 0 then
+    Controle := Self.lbValor;
+
+  // Informe
+  if Assigned(Controle) then
+  begin
+    Result := False;
+    if Assigned(Controle.FocusControl) then
+      if Controle.FocusControl.CanFocus then
+        Controle.FocusControl.SetFocus;
+    MessageDlg(Controle.Hint, TMsgDlgType.mtInformation, [TMsgDlgBtn.mbOK], 0);
+  end;
+end;
+
+function TFormIncluirPedido.IncluiItem: Boolean;
+var
+  Descricao: String;
+begin
+  Descricao := Self.lcbProduto.Text;
+  Result := Self.FPedidoClient.IncluirItem(Descricao);
+  Self.ContaRegistros;
+  Self.edProduto.SetFocus;
+end;
+
+{ ---------------------------------[ PUBICO ]--------------------------------- }
+function TFormIncluirPedido.Preparado(var MensagemDeErro: String): Boolean;
+begin
+  Self.dpData.Date := Date;
+  Self.FPreparado := Self.FPedidoClient.NovoPedido(MensagemDeErro);
+  Result := Self.FPreparado;
+end;
+
 
 end.

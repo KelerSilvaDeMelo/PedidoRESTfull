@@ -1,0 +1,34 @@
+unit ClientConstsPedido;
+
+interface
+
+const
+  // URL do servidor e suas rotas
+  BASE_HOST = 'localhost';
+  BASE_PORT = '8080';
+
+  SERVER_API_URL = 'http://' + BASE_HOST + ':' + BASE_PORT;
+
+  // As rotas diretamente mapeadas para as ações do WebModule no servidor
+  ENDPOINT_LISTAR_CLIENTES = SERVER_API_URL + '/ListarClientes';
+  ENDPOINT_LISTAR_PEDIDOS = SERVER_API_URL + '/ListarPedidos';
+  ENDPOINT_LISTAR_ITENS_DO_PEDIDO = SERVER_API_URL + '/ListarItensDoPedido';
+  ENDPOINT_INCLUIR_PEDIDO = SERVER_API_URL + '/InserirPedido';
+  ENDPOINT_ADICIONAR_ITEM_PEDIDO = SERVER_API_URL + '/AdicionarItemAoPedido';
+  ENDPOINT_LISTAR_PRODUTOS = SERVER_API_URL + '/ListarProdutos';
+  ENDPOINT_API_STATUS = SERVER_API_URL + '/APIStatus';
+
+  // Mensagens de erro
+  MSG_ERRO_SERVIDOR_INDISPONIVEL =
+    'Não foi possível se conectar ao servidor. Verifique sua conexão.';
+  MSG_ERRO_ENVIO_DADOS = 'Erro ao enviar dados ao servidor.';
+  MSG_ERRO_SERVIDOR_RESPOSTA_INVALIDA = 'Resposta inesperada do servidor.';
+
+  MSG_ERRO_LISTAR_CLIENTES = 'Indisponibilidade momentânea na lista de clientes.';
+
+  // Timeout padrão
+  HTTP_TIMEOUT = 5000; // 5 segundos
+
+implementation
+
+end.

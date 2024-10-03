@@ -1,10 +1,13 @@
 object FormListarPedidos: TFormListarPedidos
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = 'Listar Pedidos'
   ClientHeight = 441
-  ClientWidth = 304
+  ClientWidth = 344
   Color = clBtnFace
+  Constraints.MinHeight = 480
+  Constraints.MinWidth = 360
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -12,6 +15,10 @@ object FormListarPedidos: TFormListarPedidos
   Font.Style = []
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignSize = (
+    344
+    441)
   TextHeight = 15
   object Label1: TLabel
     Left = 8
@@ -21,11 +28,28 @@ object FormListarPedidos: TFormListarPedidos
     Hint = 'Preenchimento obrigat'#243'rio'
     Caption = 'Lista dos pedidos'
   end
-  object DBGrid1: TDBGrid
+  object lbRegistros: TLabel
+    Left = 8
+    Top = 371
+    Width = 65
+    Height = 15
+    Caption = '0 Registro(s)'
+  end
+  object lbTotal: TLabel
+    Left = 184
+    Top = 371
+    Width = 25
+    Height = 15
+    Anchors = [akRight, akBottom]
+    Caption = 'Total'
+    ExplicitLeft = 144
+  end
+  object gridListaPedidos: TDBGrid
     Left = 8
     Top = 41
-    Width = 288
-    Height = 392
+    Width = 328
+    Height = 324
+    Anchors = [akLeft, akTop, akRight, akBottom]
     DataSource = DataSourcePedidos
     ReadOnly = True
     TabOrder = 0
@@ -37,33 +61,54 @@ object FormListarPedidos: TFormListarPedidos
     Columns = <
       item
         Expanded = False
-        FieldName = 'numero_pedido'
-        Title.Caption = 'N'#250'mero'
+        FieldName = 'sequencia_pedido'
+        Title.Caption = 'N'#186
+        Width = 22
         Visible = True
       end
       item
         Expanded = False
         FieldName = 'codigo_cliente'
-        Title.Caption = 'Cliente'
+        Visible = False
+      end
+      item
+        Expanded = False
+        FieldName = 'nome_cliente'
+        Title.Caption = 'CLIENTE'
+        Width = 120
         Visible = True
       end
       item
         Expanded = False
         FieldName = 'data_emissao_pedido'
-        Title.Caption = 'Data'
+        Title.Alignment = taCenter
+        Title.Caption = 'DATA'
+        Width = 65
         Visible = True
       end
       item
         Expanded = False
         FieldName = 'valor_total_pedido'
-        Title.Caption = 'Valor'
+        Title.Alignment = taRightJustify
+        Title.Caption = 'VALOR'
+        Width = 80
         Visible = True
       end>
   end
+  object edtTotal: TEdit
+    Left = 216
+    Top = 368
+    Width = 121
+    Height = 23
+    Alignment = taRightJustify
+    Anchors = [akRight, akBottom]
+    ReadOnly = True
+    TabOrder = 1
+  end
   object DataSourcePedidos: TDataSource
     AutoEdit = False
-    DataSet = dmPedidoAPI.FDMemTablePedidos
-    Left = 216
-    Top = 360
+    DataSet = dmPedidoAPI.memPedidos
+    Left = 256
+    Top = 288
   end
 end

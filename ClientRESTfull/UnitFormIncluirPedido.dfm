@@ -1,10 +1,13 @@
 object FormIncluirPedido: TFormIncluirPedido
   Left = 0
   Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
   Caption = 'Incluir Pedido'
   ClientHeight = 441
-  ClientWidth = 304
+  ClientWidth = 344
   Color = clBtnFace
+  Constraints.MinHeight = 480
+  Constraints.MinWidth = 360
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -14,56 +17,178 @@ object FormIncluirPedido: TFormIncluirPedido
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  DesignSize = (
+    344
+    441)
   TextHeight = 15
-  object Label1: TLabel
+  object lbTotal: TLabel
+    Left = 184
+    Top = 371
+    Width = 25
+    Height = 15
+    Anchors = [akRight, akBottom]
+    Caption = 'Total'
+    FocusControl = edtTotal
+    ExplicitLeft = 144
+  end
+  object lbCliente: TLabel
     Left = 8
     Top = 20
-    Width = 91
+    Width = 106
     Height = 15
-    Hint = 'Preenchimento obrigat'#243'rio'
-    Caption = 'Lista dos pedidos'
-    FocusControl = DBLookupComboBox1
+    Hint = 'Preenchimento obrigat'#243'rio para o campo cliente.'
+    Caption = 'Informe o cliente (*)'
+    FocusControl = lcbCliente
   end
-  object Label2: TLabel
+  object lbDataEmissao: TLabel
     Left = 8
     Top = 76
     Width = 93
     Height = 15
-    Hint = 'Preenchimento obrigat'#243'rio'
+    Hint = 'Data retroativa n'#227'o permitida.'
     Caption = 'Informe a data (*)'
-    FocusControl = DatePicker1
+    FocusControl = dpData
   end
-  object Label3: TLabel
+  object lbProduto: TLabel
     Left = 8
     Top = 140
-    Width = 82
+    Width = 59
     Height = 15
-    Hint = 'Preenchimento obrigat'#243'rio'
-    Caption = 'Itens do pedido'
-    FocusControl = DatePicker1
+    Hint = 'Produto n'#227'o localizado.'
+    Caption = 'Produto (*)'
+    FocusControl = edProduto
   end
-  object Label4: TLabel
-    Left = 136
-    Top = 347
-    Width = 25
+  object lbQuantidade: TLabel
+    Left = 8
+    Top = 196
+    Width = 78
     Height = 15
-    Caption = 'Total'
-    FocusControl = DBLookupComboBox1
+    Hint = 'Quantidade deve ser maior que zero'
+    Caption = 'Quantidade (*)'
+    FocusControl = edtQuantidade
   end
-  object DBLookupComboBox1: TDBLookupComboBox
+  object lbValor: TLabel
+    Left = 109
+    Top = 196
+    Width = 60
+    Height = 15
+    Hint = 'Valor deve ser maior que zero'
+    Caption = 'Valor Un (*)'
+    FocusControl = edtValor
+  end
+  object lbRegistros: TLabel
+    Left = 8
+    Top = 371
+    Width = 65
+    Height = 15
+    Caption = '0 Registro(s)'
+  end
+  object gridItens: TDBGrid
+    Left = 8
+    Top = 243
+    Width = 328
+    Height = 122
+    Anchors = [akLeft, akTop, akRight, akBottom]
+    DataSource = dsPedidoItens
+    Enabled = False
+    TabOrder = 7
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -12
+    TitleFont.Name = 'Segoe UI'
+    TitleFont.Style = []
+    OnCellClick = gridItensCellClick
+    OnColExit = gridItensColExit
+    OnKeyDown = gridItensKeyDown
+    OnKeyUp = gridItensKeyUp
+    Columns = <
+      item
+        Expanded = False
+        FieldName = 'sequencia_item'
+        ReadOnly = True
+        Visible = False
+      end
+      item
+        Expanded = False
+        FieldName = 'sequencia_pedido'
+        ReadOnly = True
+        Visible = False
+      end
+      item
+        Expanded = False
+        FieldName = 'codigo_produto'
+        ReadOnly = True
+        Title.Caption = 'COD'
+        Width = 28
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'descricao_produto'
+        ReadOnly = True
+        Title.Caption = 'PRODUTO'
+        Width = 100
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'quantidade_produto'
+        Title.Caption = 'QNT'
+        Width = 28
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'valor_unitario_produto'
+        Title.Alignment = taRightJustify
+        Title.Caption = 'VL.UN'
+        Width = 65
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'valor_total_produto'
+        ReadOnly = True
+        Title.Alignment = taRightJustify
+        Title.Caption = 'VL.TOT'
+        Width = 69
+        Visible = True
+      end>
+  end
+  object edtTotal: TDBEdit
+    Left = 216
+    Top = 368
+    Width = 121
+    Height = 23
+    Anchors = [akRight, akBottom]
+    DataField = 'valor_total_pedido'
+    DataSource = dsPedidoCapa
+    ReadOnly = True
+    TabOrder = 8
+  end
+  object Button1: TButton
+    Left = 8
+    Top = 400
+    Width = 328
+    Height = 33
+    Action = ActionConfirmarPedido
+    Anchors = [akLeft, akRight, akBottom]
+    TabOrder = 9
+  end
+  object lcbCliente: TDBLookupComboBox
     Left = 8
     Top = 37
-    Width = 281
+    Width = 328
     Height = 23
     Hint = 'Preenchimento obrigat'#243'rio'
     DataField = 'codigo_cliente'
-    DataSource = dsCapa
+    DataSource = dsPedidoCapa
     KeyField = 'codigo_cliente'
     ListField = 'nome_cliente'
     ListSource = dsClientes
     TabOrder = 0
   end
-  object DatePicker1: TDatePicker
+  object dpData: TDatePicker
     Left = 8
     Top = 93
     Hint = 'Preenchimento obrigat'#243'rio'
@@ -76,318 +201,93 @@ object FormIncluirPedido: TFormIncluirPedido
     Font.Style = []
     TabOrder = 1
   end
-  object DBGrid1: TDBGrid
+  object edProduto: TDBEdit
     Left = 8
     Top = 157
-    Width = 281
-    Height = 177
-    DataSource = dsItens
-    TabOrder = 2
-    TitleFont.Charset = DEFAULT_CHARSET
-    TitleFont.Color = clWindowText
-    TitleFont.Height = -12
-    TitleFont.Name = 'Segoe UI'
-    TitleFont.Style = []
-    Columns = <
-      item
-        Expanded = False
-        FieldName = 'id_pedido_item'
-        Visible = False
-      end
-      item
-        Expanded = False
-        FieldName = 'numero_pedido_item'
-        Visible = False
-      end
-      item
-        Expanded = False
-        FieldName = 'codigo_produto_pedido_item'
-        Title.Caption = 'Produto'
-        Visible = True
-      end
-      item
-        Expanded = False
-        FieldName = 'quantidade_pedido_item'
-        Title.Alignment = taRightJustify
-        Title.Caption = 'Qnt'
-        Width = 32
-        Visible = True
-      end
-      item
-        Expanded = False
-        FieldName = 'valor_unitario_pedido_item'
-        Title.Alignment = taRightJustify
-        Title.Caption = 'Vlr. Unit'
-        Width = 65
-        Visible = True
-      end
-      item
-        Expanded = False
-        FieldName = 'valor_total_pedido_item'
-        ReadOnly = True
-        Title.Alignment = taRightJustify
-        Title.Caption = 'Vlr. Total'
-        Visible = True
-      end>
-  end
-  object DBEdit1: TDBEdit
-    Left = 168
-    Top = 344
-    Width = 121
+    Width = 82
     Height = 23
-    DataField = 'valor_total_pedido'
-    DataSource = dsCapa
-    ReadOnly = True
-    TabOrder = 3
+    Hint = 'Preenchimento obrigat'#243'rio'
+    DataField = 'codigo_produto'
+    DataSource = dsPedidoItem
+    TabOrder = 2
+    OnExit = edProdutoExit
   end
-  object Button1: TButton
+  object lcbProduto: TDBLookupComboBox
+    Left = 109
+    Top = 157
+    Width = 227
+    Height = 23
+    DataField = 'codigo_produto'
+    DataSource = dsPedidoItem
+    KeyField = 'codigo_produto'
+    ListField = 'descricao_produto'
+    ListSource = dsProdutos
+    TabOrder = 3
+    TabStop = False
+  end
+  object edtQuantidade: TDBEdit
     Left = 8
-    Top = 400
-    Width = 281
-    Height = 33
-    Caption = 'Gravar Pedido'
+    Top = 213
+    Width = 82
+    Height = 23
+    Hint = 'Preenchimento obrigat'#243'rio'
+    DataField = 'quantidade_produto'
+    DataSource = dsPedidoItem
     TabOrder = 4
   end
+  object edtValor: TDBEdit
+    Left = 109
+    Top = 213
+    Width = 92
+    Height = 23
+    Hint = 'Preenchimento obrigat'#243'rio'
+    DataField = 'valor_unitario_produto'
+    DataSource = dsPedidoItem
+    TabOrder = 5
+  end
+  object Button2: TButton
+    Left = 246
+    Top = 212
+    Width = 90
+    Height = 25
+    Action = ActionIncluirItem
+    TabOrder = 6
+  end
   object dsClientes: TDataSource
-    DataSet = dmPedidoAPI.FDMemTableClientes
-    Left = 224
-    Top = 384
+    DataSet = dmPedidoAPI.memClientes
+    Left = 280
+    Top = 48
   end
-  object mtPedidoCapa: TFDMemTable
-    Active = True
-    OnNewRecord = mtPedidoCapaNewRecord
-    FieldDefs = <
-      item
-        Name = 'numero_pedido'
-        DataType = ftAutoInc
-      end
-      item
-        Name = 'codigo_cliente'
-        DataType = ftInteger
-      end
-      item
-        Name = 'data_emissao_pedido'
-        DataType = ftDate
-      end
-      item
-        Name = 'valor_total_pedido'
-        DataType = ftBCD
-        Precision = 10
-        Size = 2
-      end>
-    IndexDefs = <>
-    FetchOptions.AssignedValues = [evMode]
-    FetchOptions.Mode = fmAll
-    ResourceOptions.AssignedValues = [rvPersistent, rvSilentMode]
-    ResourceOptions.Persistent = True
-    ResourceOptions.SilentMode = True
-    UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
-    UpdateOptions.CheckRequired = False
-    UpdateOptions.AutoCommitUpdates = True
-    StoreDefs = True
-    Left = 40
-    Top = 328
-    Content = {
-      4144425310000000DF020000FF00010001FF02FF030400180000006D00740050
-      0065006400690064006F0043006100700061000500180000006D007400500065
-      006400690064006F004300610070006100060000000000070000080032000000
-      090000FF0AFF0B04001A0000006E0075006D00650072006F005F007000650064
-      00690064006F0005001A0000006E0075006D00650072006F005F007000650064
-      00690064006F000C00010000000E000D000F00011000011100011200011300FF
-      FFFFFF1400FFFFFFFF15000116000117000118000119001A0000006E0075006D
-      00650072006F005F00700065006400690064006F00FEFF0B04001C0000006300
-      6F006400690067006F005F0063006C00690065006E007400650005001C000000
-      63006F006400690067006F005F0063006C00690065006E00740065000C000200
-      00000E000D000F00011000011A00011200011500011B00011600011800011900
-      1C00000063006F006400690067006F005F0063006C00690065006E0074006500
-      FEFF0B04002600000064006100740061005F0065006D0069007300730061006F
-      005F00700065006400690064006F0005002600000064006100740061005F0065
-      006D0069007300730061006F005F00700065006400690064006F000C00030000
-      000E001C000F00011000011A00011200011500011B0001160001180001190018
-      00000064006100740061005F0065006D0069007300730061006F00FEFF0B0400
-      24000000760061006C006F0072005F0074006F00740061006C005F0070006500
-      6400690064006F00050024000000760061006C006F0072005F0074006F007400
-      61006C005F00700065006400690064006F000C00040000000E001D001E000A00
-      00001F00020000000F00011000011A00011200011500011B0001160001180001
-      190016000000760061006C006F0072005F0074006F00740061006C0020000A00
-      0000210002000000FEFEFF22FEFF23FEFF24FEFEFEFF25FEFF26FF27FEFEFE0E
-      004D0061006E0061006700650072001E00550070006400610074006500730052
-      00650067006900730074007200790012005400610062006C0065004C00690073
-      0074000A005400610062006C00650008004E0061006D006500140053006F0075
-      007200630065004E0061006D0065000A0054006100620049004400240045006E
-      0066006F0072006300650043006F006E00730074007200610069006E00740073
-      001E004D0069006E0069006D0075006D00430061007000610063006900740079
-      00180043006800650063006B004E006F0074004E0075006C006C00140043006F
-      006C0075006D006E004C006900730074000C0043006F006C0075006D006E0010
-      0053006F007500720063006500490044000E006400740049006E007400330032
-      0010004400610074006100540079007000650014005300650061007200630068
-      00610062006C006500120041006C006C006F0077004E0075006C006C000E0041
-      00750074006F0049006E0063000800420061007300650022004100750074006F
-      0049006E006300720065006D0065006E00740053006500650064002200410075
-      0074006F0049006E006300720065006D0065006E007400530074006500700014
-      004F0041006C006C006F0077004E0075006C006C0010004F0049006E00570068
-      006500720065000C004F0049006E004B006500790020004F0041006600740065
-      00720049006E0073004300680061006E006700650064001A004F007200690067
-      0069006E0043006F006C004E0061006D0065000E00440065006600610075006C
-      00740012004F0049006E005500700064006100740065000C0064007400440061
-      00740065000A0064007400420043004400120050007200650063006900730069
-      006F006E000A005300630061006C0065001E0053006F00750072006300650050
-      007200650063006900730069006F006E00160053006F00750072006300650053
-      00630061006C0065001C0043006F006E00730074007200610069006E0074004C
-      00690073007400100056006900650077004C006900730074000E0052006F0077
-      004C006900730074001800520065006C006100740069006F006E004C00690073
-      0074001C0055007000640061007400650073004A006F00750072006E0061006C
-      000E004300680061006E00670065007300}
-    object mtPedidoCapanumero_pedido: TFDAutoIncField
-      FieldName = 'numero_pedido'
-      Origin = 'numero_pedido'
-      ProviderFlags = [pfInWhere, pfInKey]
-      ReadOnly = False
+  object dsPedidoCapa: TDataSource
+    DataSet = dmPedidoClient.memPedidoCapa
+    Left = 200
+    Top = 48
+  end
+  object dsPedidoItens: TDataSource
+    DataSet = dmPedidoClient.memItensDoPedido
+    Left = 200
+    Top = 312
+  end
+  object ActionList1: TActionList
+    Left = 280
+    Top = 104
+    object ActionIncluirItem: TAction
+      Caption = 'Incluir Item'
+      OnExecute = ActionIncluirItemExecute
     end
-    object mtPedidoCapacodigo_cliente: TIntegerField
-      AutoGenerateValue = arDefault
-      FieldName = 'codigo_cliente'
-      Origin = 'codigo_cliente'
-    end
-    object mtPedidoCapadata_emissao_pedido: TDateField
-      AutoGenerateValue = arDefault
-      FieldName = 'data_emissao_pedido'
-      Origin = 'data_emissao'
-    end
-    object mtPedidoCapavalor_total_pedido: TBCDField
-      AutoGenerateValue = arDefault
-      FieldName = 'valor_total_pedido'
-      Origin = 'valor_total'
-      currency = True
-      Precision = 10
-      Size = 2
+    object ActionConfirmarPedido: TAction
+      Caption = 'Confirmar Pedido'
+      OnExecute = ActionConfirmarPedidoExecute
     end
   end
-  object mtPedidoItens: TFDMemTable
-    Active = True
-    OnNewRecord = mtPedidoItensNewRecord
-    FetchOptions.AssignedValues = [evMode]
-    FetchOptions.Mode = fmAll
-    ResourceOptions.AssignedValues = [rvPersistent, rvSilentMode]
-    ResourceOptions.Persistent = True
-    ResourceOptions.SilentMode = True
-    UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
-    UpdateOptions.CheckRequired = False
-    UpdateOptions.AutoCommitUpdates = True
-    Left = 40
-    Top = 384
-    Content = {
-      41444253100000009E040000FF00010001FF02FF0304001A0000006D00740050
-      0065006400690064006F004900740065006E00730005001A0000006D00740050
-      0065006400690064006F004900740065006E0073000600000000000700000800
-      32000000090000FF0AFF0B04001C000000690064005F00700065006400690064
-      006F005F006900740065006D0005001C000000690064005F0070006500640069
-      0064006F005F006900740065006D000C00010000000E000D000F000110000111
-      00011200011300FFFFFFFF1400FFFFFFFF150001160001170001180004000000
-      69006400FEFF0B0400240000006E0075006D00650072006F005F007000650064
-      00690064006F005F006900740065006D000500240000006E0075006D00650072
-      006F005F00700065006400690064006F005F006900740065006D000C00020000
-      000E000D000F00011000011900011200011500011A000116000117000118001A
-      0000006E0075006D00650072006F005F00700065006400690064006F00FEFF0B
-      04003400000063006F006400690067006F005F00700072006F00640075007400
-      6F005F00700065006400690064006F005F006900740065006D00050034000000
-      63006F006400690067006F005F00700072006F006400750074006F005F007000
-      65006400690064006F005F006900740065006D000C00030000000E000D000F00
-      011000011900011200011500011A000116000117000118001C00000063006F00
-      6400690067006F005F00700072006F006400750074006F00FEFF0B04002C0000
-      007100750061006E007400690064006100640065005F00700065006400690064
-      006F005F006900740065006D0005002C0000007100750061006E007400690064
-      006100640065005F00700065006400690064006F005F006900740065006D000C
-      00040000000E001B001C000A0000001D00040000000F00011000011900011200
-      011500011A00011600011700011800140000007100750061006E007400690064
-      006100640065001E000A0000001F0004000000FEFF0B04003400000076006100
-      6C006F0072005F0075006E00690074006100720069006F005F00700065006400
-      690064006F005F006900740065006D00050034000000760061006C006F007200
-      5F0075006E00690074006100720069006F005F00700065006400690064006F00
-      5F006900740065006D000C00050000000E001B001C000A0000001D0002000000
-      0F00011000011900011200011500011A000116000117000118001C0000007600
-      61006C006F0072005F0075006E00690074006100720069006F001E000A000000
-      1F0002000000FEFF0B04002E000000760061006C006F0072005F0074006F0074
-      0061006C005F00700065006400690064006F005F006900740065006D0005002E
-      000000760061006C006F0072005F0074006F00740061006C005F007000650064
-      00690064006F005F006900740065006D000C00060000000E001B001C000A0000
-      001D00020000000F00011000011900011200011500011A000116000117000118
-      0016000000760061006C006F0072005F0074006F00740061006C001E000A0000
-      001F0002000000FEFEFF20FEFF21FEFF22FEFEFEFF23FEFF24FF25FEFEFE0E00
-      4D0061006E0061006700650072001E0055007000640061007400650073005200
-      650067006900730074007200790012005400610062006C0065004C0069007300
-      74000A005400610062006C00650008004E0061006D006500140053006F007500
-      7200630065004E0061006D0065000A0054006100620049004400240045006E00
-      66006F0072006300650043006F006E00730074007200610069006E0074007300
-      1E004D0069006E0069006D0075006D0043006100700061006300690074007900
-      180043006800650063006B004E006F0074004E0075006C006C00140043006F00
-      6C0075006D006E004C006900730074000C0043006F006C0075006D006E001000
-      53006F007500720063006500490044000E006400740049006E00740033003200
-      1000440061007400610054007900700065001400530065006100720063006800
-      610062006C006500120041006C006C006F0077004E0075006C006C000E004100
-      750074006F0049006E0063000800420061007300650022004100750074006F00
-      49006E006300720065006D0065006E0074005300650065006400220041007500
-      74006F0049006E006300720065006D0065006E00740053007400650070001400
-      4F0041006C006C006F0077004E0075006C006C0010004F0049006E0057006800
-      65007200650020004F004100660074006500720049006E007300430068006100
-      6E006700650064001A004F0072006900670069006E0043006F006C004E006100
-      6D0065000E00440065006600610075006C00740012004F0049006E0055007000
-      64006100740065000A0064007400420043004400120050007200650063006900
-      730069006F006E000A005300630061006C0065001E0053006F00750072006300
-      650050007200650063006900730069006F006E00160053006F00750072006300
-      65005300630061006C0065001C0043006F006E00730074007200610069006E00
-      74004C00690073007400100056006900650077004C006900730074000E005200
-      6F0077004C006900730074001800520065006C006100740069006F006E004C00
-      6900730074001C0055007000640061007400650073004A006F00750072006E00
-      61006C000E004300680061006E00670065007300}
-    object mtPedidoItensid_pedido_item: TFDAutoIncField
-      FieldName = 'id_pedido_item'
-      Origin = 'id'
-      ReadOnly = False
-    end
-    object mtPedidoItensnumero_pedido_item: TIntegerField
-      AutoGenerateValue = arDefault
-      FieldName = 'numero_pedido_item'
-      Origin = 'numero_pedido'
-    end
-    object mtPedidoItenscodigo_produto_pedido_item: TIntegerField
-      AutoGenerateValue = arDefault
-      FieldName = 'codigo_produto_pedido_item'
-      Origin = 'codigo_produto'
-    end
-    object mtPedidoItensquantidade_pedido_item: TBCDField
-      AutoGenerateValue = arDefault
-      FieldName = 'quantidade_pedido_item'
-      Origin = 'quantidade'
-      OnChange = mtPedidoItensquantidade_pedido_itemChange
-      Precision = 10
-    end
-    object mtPedidoItensvalor_unitario_pedido_item: TBCDField
-      AutoGenerateValue = arDefault
-      FieldName = 'valor_unitario_pedido_item'
-      Origin = 'valor_unitario'
-      OnChange = mtPedidoItensquantidade_pedido_itemChange
-      currency = True
-      Precision = 10
-      Size = 2
-    end
-    object mtPedidoItensvalor_total_pedido_item: TBCDField
-      AutoGenerateValue = arDefault
-      FieldName = 'valor_total_pedido_item'
-      Origin = 'valor_total'
-      currency = True
-      Precision = 10
-      Size = 2
-    end
+  object dsProdutos: TDataSource
+    DataSet = dmPedidoAPI.memProdutos
+    Left = 280
+    Top = 312
   end
-  object dsCapa: TDataSource
-    DataSet = mtPedidoCapa
-    Left = 128
-    Top = 328
-  end
-  object dsItens: TDataSource
-    DataSet = mtPedidoItens
-    Left = 128
-    Top = 384
+  object dsPedidoItem: TDataSource
+    DataSet = dmPedidoClient.memPedidoItem
+    Left = 200
+    Top = 104
   end
 end

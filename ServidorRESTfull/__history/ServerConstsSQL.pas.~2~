@@ -1,0 +1,20 @@
+unit ServerConstsSQL;
+
+interface
+
+const
+  SQL_ListarClientes =
+    'SELECT cli.codigo as codigo_cliente,' +
+          ' cli.nome as nome_cliente' +
+    ' FROM clientes cli ' +
+    'ORDER BY 2';
+
+  SQL_ListarProdutos =
+    'SELECT prod.codigo as codigo_produto,' +
+          ' prod.descricao as descricao_produto,' +
+          ' prod.preco_venda as preco_venda_produto' +
+    ' FROM produtos prod';
+
+implementation
+
+end.

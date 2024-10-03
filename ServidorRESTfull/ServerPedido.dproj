@@ -116,6 +116,7 @@
             <DesignClass>TWebModule</DesignClass>
         </DCCReference>
         <DCCReference Include="ServerConstsPedido.pas"/>
+        <DCCReference Include="ServerConstsSQL.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

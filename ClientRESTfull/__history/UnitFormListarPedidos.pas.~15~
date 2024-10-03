@@ -1,0 +1,82 @@
+unit UnitFormListarPedidos;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, UnitDMPedidoAPI, Data.DB,
+  Vcl.Grids, Vcl.DBGrids, Vcl.Mask, Vcl.ExtCtrls, Vcl.DBCtrls;
+
+type
+  TFormListarPedidos = class(TForm)
+    Label1: TLabel;
+    DataSourcePedidos: TDataSource;
+    gridListaPedidos: TDBGrid;
+    lbRegistros: TLabel;
+    lbTotal: TLabel;
+    edtTotal: TDBEdit;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+  private
+    { Private symbols }
+    FPedidoAPI: TdmPedidoAPI;
+  private
+    { Private declarations }
+    procedure ContaRegistros;
+    procedure SomaTotalDePedidos;
+  public
+    { Public declarations }
+    function Preparado(var MensagemDeErro: String): Boolean;
+  end;
+
+var
+  FormListarPedidos: TFormListarPedidos;
+
+implementation
+
+{$R *.dfm}
+
+{--------------------------------[ CONSTRUÇÃO ]--------------------------------}
+procedure TFormListarPedidos.FormCreate(Sender: TObject);
+begin
+  Self.FPedidoAPI := TdmPedidoAPI.Create(nil);
+end;
+
+procedure TFormListarPedidos.FormDestroy(Sender: TObject);
+begin
+  Self.FPedidoAPI.Free;
+end;
+
+
+{---------------------------------[ PUBLICO ]----------------------------------}
+procedure TFormListarPedidos.ContaRegistros;
+var
+  Contagem: Integer;
+  Registros: String;
+begin
+  Contagem := Self.gridListaPedidos.DataSource.DataSet.RecordCount;
+  Registros := Contagem.ToString;
+  Self.lbRegistros.Caption := Registros + ' Registro(s)';
+
+  Self.gridListaPedidos.Enabled := (Contagem > 0);
+end;
+
+
+{---------------------------------[ PUBLICO ]----------------------------------}
+function TFormListarPedidos.Preparado(var MensagemDeErro: String): Boolean;
+begin
+  Result := Self.FPedidoAPI.ListarPedidos(MensagemDeErro);
+  if Result then
+  begin
+    Self.ContaRegistros;
+    Self.SomaTotalDePedidos;
+  end;
+end;
+
+procedure TFormListarPedidos.SomaTotalDePedidos;
+begin
+  {...}
+end;
+
+
+end.

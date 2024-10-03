@@ -14,7 +14,6 @@ type
     FServerHost: string;
     FServerPort: string;
     FConectado: Boolean;
-    FMensagem: String;
     FCache: String; // Cache de dados para uso offline
 
   private
@@ -27,7 +26,7 @@ type
   end;
 
 var
-  dmBaseAPI: TdmBaseAPI;
+  dmGlobalAPI: TdmBaseAPI;
 
 implementation
 
@@ -35,13 +34,13 @@ implementation
 {$R *.dfm}
 
 { -------------------------------[ CONSTRUÇÃO ]------------------------------- }
+{ Inicialização mestre do motor de sustentação da API }
 procedure TdmBaseAPI.DataModuleCreate(Sender: TObject);
 begin
   Self.FServerHost := '';
   Self.FServerPort := '';
   Self.FConectado := False;
-  Self.FMensagem := '';
-  Self.FCache := ExtractFilePath(ParamStr(0)) + 'Cache\';
+  Self.FCache := ExtractFilePath(ParamStr(0)) + 'ClientCache\';
   if not DirectoryExists(Self.FCache) then
   begin
     CreateDir(Self.FCache);
@@ -49,7 +48,7 @@ begin
 end;
 
 { --------------------------------[ PRIVADO ]--------------------------------- }
-{ Ler as configurações do arquivo client_config.ini }
+{ Lê as configurações do arquivo client_config.ini }
 procedure TdmBaseAPI.LerConfigIni;
 var
   Ini: TIniFile;
@@ -73,7 +72,7 @@ end;
 
 { --------------------------------[ PUBLICO ]--------------------------------- }
 
-{ Testa a conexão com o servidor }
+{ Testa a conexão com o servidor de aplicação }
 function TdmBaseAPI.TestarConexao(var MensagemErro: String): Boolean;
 var
   HTTPClient: TIdHTTP;
@@ -88,7 +87,7 @@ begin
     SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
     HTTPClient.IOHandler := SSLHandler;
 
-    // Atualize a URL para o endpoint correto /APIStatus
+    // Monta a URL de teste
     Url := Format('http://%s:%s/APIStatus', [FServerHost, FServerPort]);
     try
       Resposta := HTTPClient.Get(Url);
@@ -97,9 +96,8 @@ begin
       on E: Exception do
       begin
         Self.FConectado := False;
-        Self.FMensagem := 'Erro ao conectar com o servidor de aplicação: '
-                        + E.Message;
-        MensagemErro := Self.FMensagem;
+        MensagemErro := MSG_ERRO_SERVIDOR_INDISPONIVEL + #13
+                      + E.Message;
       end;
     end;
   finally
@@ -120,7 +118,6 @@ function TdmBaseAPI.PastaCache: String;
 begin
   Result := Self.FCache;
 end;
-
 
 
 end.

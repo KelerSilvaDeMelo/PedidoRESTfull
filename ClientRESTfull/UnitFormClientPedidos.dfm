@@ -3,8 +3,10 @@ object FormClientPedidos: TFormClientPedidos
   Top = 0
   Caption = 'Client Pedidos 2024'
   ClientHeight = 441
-  ClientWidth = 304
+  ClientWidth = 344
   Color = clBtnFace
+  Constraints.MinHeight = 480
+  Constraints.MinWidth = 360
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -13,36 +15,45 @@ object FormClientPedidos: TFormClientPedidos
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  DesignSize = (
+    344
+    441)
   TextHeight = 15
   object Button1: TButton
-    Left = 54
+    Left = 74
     Top = 64
     Width = 197
     Height = 154
     Action = ActionIncluirPedido
+    Anchors = []
     ImageAlignment = iaTop
     ImageMargins.Top = 32
     Images = ImageList1
     TabOrder = 0
     Visible = False
+    ExplicitLeft = 54
   end
   object Button2: TButton
-    Left = 54
+    Left = 74
     Top = 224
     Width = 197
     Height = 154
     Action = ActionListarPedidos
+    Anchors = []
     ImageAlignment = iaTop
     ImageMargins.Top = 32
     Images = ImageList1
     TabOrder = 1
     Visible = False
+    ExplicitLeft = 54
   end
   object ActivityIndicator1: TActivityIndicator
-    Left = 120
+    Left = 140
     Top = 188
+    Anchors = []
     Animate = True
     IndicatorSize = aisXLarge
+    ExplicitLeft = 120
   end
   object ActionList1: TActionList
     Images = ImageList1

@@ -7,30 +7,50 @@ uses
   FireDAC.Comp.Client, IdHTTP, IdSSLOpenSSL, System.JSON, ClientConstsPedido,
   FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
   FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
-  FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin;
+  FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin, System.Net.HttpClient;
 
 type
   TdmPedidoAPI = class(TDataModule)
-    FDMemTableClientes: TFDMemTable;
-    FDMemTableProdutos: TFDMemTable;
-    FDMemTablePedidos: TFDMemTable;
-    FDStanStorageJSONLink1: TFDStanStorageJSONLink;
-    FDMemTableItens: TFDMemTable;
+    memClientes: TFDMemTable;
+    memProdutos: TFDMemTable;
+    memPedidos: TFDMemTable;
+    StorageJSONLink: TFDStanStorageJSONLink;
+    memPedidoItens: TFDMemTable;
+    memPedidoItenssequencia_item: TFDAutoIncField;
+    memPedidoItenssequencia_pedido: TIntegerField;
+    memPedidoItenscodigo_produto: TIntegerField;
+    memPedidoItensdescricao_produto: TStringField;
+    memPedidoItensquantidade_produto: TBCDField;
+    memPedidoItensvalor_unitario_produto: TBCDField;
+    memPedidoItensvalor_total_produto: TBCDField;
+    memClientescodigo_cliente: TFDAutoIncField;
+    memClientesnome_cliente: TStringField;
+    memProdutoscodigo_produto: TFDAutoIncField;
+    memProdutosdescricao_produto: TStringField;
+    memProdutospreco_venda_produto: TBCDField;
+    memPedidossequencia_pedido: TFDAutoIncField;
+    memPedidoscodigo_cliente: TIntegerField;
+    memPedidosnome_cliente: TStringField;
+    memPedidosdata_emissao_pedido: TDateField;
+    memPedidosvalor_total_pedido: TBCDField;
   private
     procedure ConfigurarMemTableClientes;
     procedure ConfigurarMemTableProdutos;
     procedure ConfigurarMemTablePedidos;
     procedure ConfigurarMemTableItens;
 
-  public
-    procedure ListarClientes;
-    procedure ListarProdutos;
-    procedure ListarPedidos;
-    procedure ListarItensDoPedido;
-  end;
+    function ListaAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
 
-var
-  dmPedidoAPI: TdmPedidoAPI;
+  public
+    function ListarClientes(var MensagemDeErro: String): Boolean;
+    function ListarProdutos(var MensagemDeErro: String): Boolean;
+    function ListarPedidos(var MensagemDeErro: String): Boolean;
+    function ListarItensDoPedido(var MensagemDeErro: String): Boolean;
+
+    function ProdutoExiste(CodigoDoProduto: Integer): Boolean;
+    function BuscaValorDoProduto(CodigoDoProduto: Integer): Currency;
+    function EnviaNovoPedido(DataSetPedido, DataSetItens: TFDMemTable; var MensagemDeErro: String): Boolean;
+  end;
 
 implementation
 
@@ -41,246 +61,218 @@ uses
 {$R *.dfm}
 { --------------------------------[ PRIVADO ]--------------------------------- }
 
-// Configura o TFDMemTableClientes
+// Configura o MemTable Clientes
 procedure TdmPedidoAPI.ConfigurarMemTableClientes;
 begin
-  Self.FDMemTableClientes.Close;
-  Self.FDMemTableClientes.CreateDataSet;
+  Self.memClientes.Close;
+  Self.memClientes.CreateDataSet;
 end;
 
-// Configura o TFDMemTableProdutos
+// Configura o MemTable Produtos
 procedure TdmPedidoAPI.ConfigurarMemTableProdutos;
 begin
-  Self.FDMemTableProdutos.Close;
-  Self.FDMemTableProdutos.CreateDataSet;
+  Self.memProdutos.Close;
+  Self.memProdutos.CreateDataSet;
 end;
 
-// Configura o TFDMemTablePedidos
+// Configura o MemTable Pedidos
 procedure TdmPedidoAPI.ConfigurarMemTablePedidos;
 begin
-  Self.FDMemTablePedidos.Close;
-  Self.FDMemTablePedidos.CreateDataSet;
+  Self.memPedidos.Close;
+  Self.memPedidos.CreateDataSet;
 end;
 
-// Configura o TFDMemTableItens
+// Configura o MemTable Itens
 procedure TdmPedidoAPI.ConfigurarMemTableItens;
 begin
-  Self.FDMemTableItens.Close;
-  Self.FDMemTableItens.CreateDataSet;
+  Self.memPedidoItens.Close;
+  Self.memPedidoItens.CreateDataSet;
+end;
+
+// Metodo base para listagem via API
+function TdmPedidoAPI.ListaAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+var
+  HTTPClient: TIdHTTP;
+  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  JsonResponse: string;
+  JsonArray: TJSONArray;
+  JsonObject: TJSONObject;
+  I: Integer;
+  Campo: TField;
+begin
+  Result := False;
+
+  HTTPClient := TIdHTTP.Create(nil);
+  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  try
+    HTTPClient.IOHandler := SSLHandler;
+    try
+      JsonResponse := HTTPClient.Get(Url);
+      JsonArray := TJSONObject.ParseJSONValue
+        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
+
+      if JsonArray = nil then
+        raise Exception.Create('Resposta inválida do servidor.');
+
+      for I := 0 to JsonArray.Count - 1 do
+      begin
+        JsonObject := JsonArray.Items[I] as TJSONObject;
+        DataSetLista.Append;
+        for Campo in DataSetLista.Fields do
+        begin
+          Campo.Value := JsonObject.GetValue<String>(Campo.FieldName);
+        end;
+        DataSetLista.Post;
+      end;
+
+      DataSetLista.SaveToFile( dmGlobalAPI.PastaCache + 'ClientCache_' + DataSetLista.Name + '.json', sfJSON );
+      Result := True;
+    except
+      on E: Exception do
+        MensagemDeErro := MensagemDeErro + #13#10 + E.Message;
+    end;
+  finally
+    HTTPClient.Free;
+    SSLHandler.Free;
+  end;
 end;
 
 
 { --------------------------------[ PÚBLICO ]--------------------------------- }
 
-// Lista os clientes e popula o TFDMemTableClientes
-procedure TdmPedidoAPI.ListarClientes;
+// Lista os clientes e popula o MemTable Clientes
+function TdmPedidoAPI.ListarClientes(var MensagemDeErro: String): Boolean;
 var
-  HTTPClient: TIdHTTP;
-  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
-  Url: string;
-  JsonResponse: string;
-  JsonArray: TJSONArray;
-  JsonObject: TJSONObject;
-  I: Integer;
-  Campo: TField;
+  URL: string;
 begin
-  HTTPClient := TIdHTTP.Create(nil);
-  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  try
-    HTTPClient.IOHandler := SSLHandler;
-    Url := ENDPOINT_LISTAR_CLIENTES;
+  URL := ENDPOINT_LISTAR_CLIENTES;
+  MensagemDeErro := MSG_ERRO_LISTAR_CLIENTES;
 
-    // As constante estão definida em ClientConstsPedido
-    try
-      JsonResponse := HTTPClient.Get(Url);
-      JsonArray := TJSONObject.ParseJSONValue
-        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
-
-      if JsonArray = nil then
-        raise Exception.Create('Resposta inválida do servidor.');
-
-      ConfigurarMemTableClientes;
-      FDMemTableClientes.EmptyDataSet;
-
-      for I := 0 to JsonArray.Count - 1 do
-      begin
-        JsonObject := JsonArray.Items[I] as TJSONObject;
-        FDMemTableClientes.Append;
-        for Campo in FDMemTableClientes.Fields do
-        begin
-          Campo.Value := JsonObject.GetValue<String>(Campo.FieldName);
-        end;
-        FDMemTableClientes.Post;
-      end;
-
-      FDMemTableClientes.SaveToFile( dmBaseAPI.PastaCache + FDMemTableClientes.Name + '.json', sfJSON );
-    except
-      on E: Exception do
-        raise Exception.Create('Indisponibilidade momentânea na lista de clientes: ' +
-          E.Message);
-    end;
-  finally
-    HTTPClient.Free;
-    SSLHandler.Free;
-  end;
+  Self.ConfigurarMemTableClientes;
+  Result := Self.ListaAPI(URL, Self.memClientes, MensagemDeErro);
 end;
 
-// Lista os produtos e popula o TFDMemTableProdutos
-procedure TdmPedidoAPI.ListarProdutos;
+// Lista os produtos e popula o MemTable Produtos
+function TdmPedidoAPI.ListarProdutos(var MensagemDeErro: String): Boolean;
 var
-  HTTPClient: TIdHTTP;
-  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
-  Url: string;
-  JsonResponse: string;
-  JsonArray: TJSONArray;
-  JsonObject: TJSONObject;
-  I: Integer;
-  Campo: TField;
-  Canoi: TObject;
+  URL: string;
 begin
-  HTTPClient := TIdHTTP.Create(nil);
-  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  try
-    HTTPClient.IOHandler := SSLHandler;
-    Url := ENDPOINT_LISTAR_PRODUTOS;
-    try
-      JsonResponse := HTTPClient.Get(Url);
-      JsonArray := TJSONObject.ParseJSONValue
-        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
+  URL := ENDPOINT_LISTAR_PRODUTOS;
+  MensagemDeErro := MSG_ERRO_LISTAR_PRODUTOS;
 
-      if JsonArray = nil then
-        raise Exception.Create('Resposta inválida do servidor.');
-
-      ConfigurarMemTableProdutos;
-      FDMemTableProdutos.EmptyDataSet;
-
-      for I := 0 to JsonArray.Count - 1 do
-      begin
-        JsonObject := JsonArray.Items[I] as TJSONObject;
-        FDMemTableProdutos.Append;
-
-        for Campo in FDMemTableProdutos.Fields do
-        begin
-          Campo.Value := JsonObject.GetValue<String>(Campo.FieldName);
-        end;
-
-        FDMemTableProdutos.Post;
-      end;
-
-      FDMemTableProdutos.SaveToFile( dmBaseAPI.PastaCache + FDMemTableProdutos.Name + '.json', sfJSON );
-    except
-      on E: Exception do
-        raise Exception.Create('Indisponibilidade momentânea na lista de produtos: ' +
-          E.Message);
-    end;
-  finally
-    HTTPClient.Free;
-    SSLHandler.Free;
-  end;
+  Self.ConfigurarMemTableProdutos;
+  Result := Self.ListaAPI(URL, Self.memProdutos, MensagemDeErro);
 end;
 
-// Lista os pedidos e popula o TFDMemTablePedidos
-procedure TdmPedidoAPI.ListarPedidos;
+// Lista os pedidos e popula o MemTable Pedidos
+function TdmPedidoAPI.ListarPedidos(var MensagemDeErro: String): Boolean;
 var
-  HTTPClient: TIdHTTP;
-  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
-  Url: string;
-  JsonResponse: string;
-  JsonArray: TJSONArray;
-  JsonObject: TJSONObject;
-  I: Integer;
-  Campo: TField;
+  URL: string;
 begin
-  HTTPClient := TIdHTTP.Create(nil);
-  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  try
-    HTTPClient.IOHandler := SSLHandler;
-    Url := ENDPOINT_LISTAR_PEDIDOS;
-    try
-      JsonResponse := HTTPClient.Get(Url);
-      JsonArray := TJSONObject.ParseJSONValue
-        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
+  URL := ENDPOINT_LISTAR_PEDIDOS;
+  MensagemDeErro := MSG_ERRO_LISTAR_PRODUTOS;
 
-      if JsonArray = nil then
-        raise Exception.Create('Resposta inválida do servidor.');
-
-      ConfigurarMemTablePedidos;
-      FDMemTablePedidos.EmptyDataSet;
-
-      for I := 0 to JsonArray.Count - 1 do
-      begin
-        JsonObject := JsonArray.Items[I] as TJSONObject;
-        FDMemTablePedidos.Append;
-
-        for Campo in FDMemTablePedidos.Fields do
-        begin
-          Campo.Value := JsonObject.GetValue<String>(Campo.FieldName);
-        end;
-
-        FDMemTablePedidos.Post;
-      end;
-
-      FDMemTablePedidos.SaveToFile( dmBaseAPI.PastaCache + FDMemTablePedidos.Name + '.json', sfJSON );
-    except
-      on E: Exception do
-        raise Exception.Create('Indisponibilidade momentânea na lista de pedidos: ' +
-          E.Message);
-    end;
-  finally
-    HTTPClient.Free;
-    SSLHandler.Free;
-  end;
+  Self.ConfigurarMemTablePedidos;
+  Result := Self.ListaAPI(URL, Self.memPedidos, MensagemDeErro);
 end;
 
-procedure TdmPedidoAPI.ListarItensDoPedido;
+// Lista os pedidos e popula o MemTable ItensDoPedidos
+function TdmPedidoAPI.ListarItensDoPedido(var MensagemDeErro: String): Boolean;
 var
-  HTTPClient: TIdHTTP;
-  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
-  Url: string;
-  JsonResponse: string;
-  JsonArray: TJSONArray;
-  JsonObject: TJSONObject;
-  I: Integer;
-  Campo: TField;
+  URL: string;
 begin
-  HTTPClient := TIdHTTP.Create(nil);
-  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  URL := ENDPOINT_LISTAR_ITENS_DO_PEDIDO;
+  MensagemDeErro := MSG_ERRO_LISTAR_PEDIDO_ITENS;
+
+  Self.ConfigurarMemTableProdutos;
+  Result := Self.ListaAPI(URL, Self.memPedidoItens, MensagemDeErro);
+end;
+
+// Verifica a existência de um produto específico
+function TdmPedidoAPI.ProdutoExiste(CodigoDoProduto: Integer): Boolean;
+var
+  Marcador: TBookmark;
+begin
+  Marcador := Self.memProdutos.Bookmark;
+  Self.memProdutos.DisableControls;
+  Self.memProdutos.First;
+  Result := Self.memProdutos.Locate('codigo_produto', CodigoDoProduto, [loCaseInsensitive]);
+  Self.memProdutos.Bookmark := Marcador;
+  Self.memProdutos.EnableControls;
+end;
+
+// Busca o valor de um produto específico.
+function TdmPedidoAPI.BuscaValorDoProduto(CodigoDoProduto: Integer): Currency;
+var
+  Marcador: TBookmark;
+begin
+  Result := 0.00;
+  Marcador := Self.memProdutos.Bookmark;
+  Self.memProdutos.DisableControls;
+  Self.memProdutos.First;
+  if Self.memProdutos.Locate('codigo_produto', CodigoDoProduto, [loCaseInsensitive]) then
+  begin
+    Result := Self.memProdutospreco_venda_produto.AsCurrency;
+  end;
+  Self.memProdutos.Bookmark := Marcador;
+  Self.memProdutos.EnableControls;
+end;
+
+function TdmPedidoAPI.EnviaNovoPedido(DataSetPedido, DataSetItens: TFDMemTable;
+  var MensagemDeErro: String): Boolean;
+var
+  HTTPClient: THTTPClient;
+  Params: TStringList;
+  Response: IHTTPResponse;
+  JsonResponse: TJSONObject;
+  PedidoID: Integer;
+  ResponseContent, CodigoCliente, DataEmissao, ValorTotal: String;
+begin
+  Result := False;
+  HTTPClient := THTTPClient.Create;
+  Params := TStringList.Create;
+  JsonResponse := nil;
   try
-    HTTPClient.IOHandler := SSLHandler;
-    Url := ENDPOINT_LISTAR_ITENS_DO_PEDIDO;
-    try
-      JsonResponse := HTTPClient.Get(Url);
-      JsonArray := TJSONObject.ParseJSONValue
-        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
+    // Preenche os dados do pedido
+    CodigoCliente := DataSetPedido.FieldByName('codigo_cliente').AsString;
+    DataEmissao := DataSetPedido.FieldByName('data_emissao_pedido').AsString;
+    ValorTotal := DataSetPedido.FieldByName('valor_total_pedido').AsString;
 
-      if JsonArray = nil then
-        raise Exception.Create('Resposta inválida do servidor.');
+    Params.Add('cliente_id=' + CodigoCliente);
+    Params.Add('data=' + DataEmissao);
+    Params.Add('valor_total=' + ValorTotal);
 
-      ConfigurarMemTableItens;
-      FDMemTableItens.EmptyDataSet;
+    // Envia a requisição POST para o servidor
+    Response := HTTPClient.Post(ENDPOINT_INCLUIR_PEDIDO, Params);
 
-      for I := 0 to JsonArray.Count - 1 do
-      begin
-        JsonObject := JsonArray.Items[I] as TJSONObject;
-        FDMemTableItens.Append;
+    // Verifica o código de status da resposta
+    if Response.StatusCode = 201 then
+    begin
+      Result := True;
+      ResponseContent := Response.ContentAsString;
 
-        for Campo in FDMemTableItens.Fields do
+      // Analisa o conteúdo JSON da resposta
+      JsonResponse := TJSONObject.ParseJSONValue(ResponseContent) as TJSONObject;
+      try
+        if Assigned(JsonResponse) then
         begin
-          Campo.Value := JsonObject.GetValue<String>(Campo.FieldName);
+          // Extrai o valor de pedido_id
+          PedidoID := JsonResponse.GetValue<Integer>('pedido_id');
+
+          // Atualiza o campo 'sequencia_pedido' no DataSet
+          DataSetPedido.FieldByName('sequencia_pedido').AsInteger := PedidoID;
         end;
-
-        FDMemTableItens.Post;
+      finally
+        JsonResponse.Free;
       end;
-
-      FDMemTableItens.SaveToFile( dmBaseAPI.PastaCache + FDMemTableItens.Name + '.json', sfJSON );
-    except
-      on E: Exception do
-        raise Exception.Create('Indisponibilidade momentânea na lista de pedidos: ' +
-          E.Message);
+    end
+    else
+    begin
+      MensagemDeErro := MensagemDeErro + #13#10 + Response.ContentAsString;
     end;
   finally
+    Params.Free;
     HTTPClient.Free;
-    SSLHandler.Free;
   end;
 end;
 

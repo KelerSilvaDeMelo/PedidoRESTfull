@@ -9,7 +9,8 @@ uses
   UnitDMBaseAPI in 'UnitDMBaseAPI.pas' {dmBaseAPI: TDataModule},
   UnitDMPedidoAPI in 'UnitDMPedidoAPI.pas' {dmPedidoAPI: TDataModule},
   UnitFormIncluirPedido in 'UnitFormIncluirPedido.pas' {FormIncluirPedido},
-  UnitFormListarPedidos in 'UnitFormListarPedidos.pas' {FormListarPedidos};
+  UnitFormListarPedidos in 'UnitFormListarPedidos.pas' {FormListarPedidos},
+  UnitDMPedidoClient in 'UnitDMPedidoClient.pas' {dmPedidoClient: TDataModule};
 
 {$R *.res}
 
@@ -19,6 +20,5 @@ begin
   Application.Title := 'Pedidos Client';
   TStyleManager.TrySetStyle('Windows11 Impressive Light');
   Application.CreateForm(TFormClientPedidos, FormClientPedidos);
-  Application.CreateForm(TFormListarPedidos, FormListarPedidos);
   Application.Run;
 end.
