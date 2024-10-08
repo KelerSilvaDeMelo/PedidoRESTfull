@@ -22,7 +22,7 @@ object FormListarPedidos: TFormListarPedidos
   TextHeight = 15
   object Label1: TLabel
     Left = 8
-    Top = 20
+    Top = 14
     Width = 91
     Height = 15
     Hint = 'Preenchimento obrigat'#243'rio'
@@ -30,27 +30,28 @@ object FormListarPedidos: TFormListarPedidos
   end
   object lbRegistros: TLabel
     Left = 8
-    Top = 371
+    Top = 411
     Width = 65
     Height = 15
+    Anchors = [akLeft, akBottom]
     Caption = '0 Registro(s)'
   end
   object lbTotal: TLabel
     Left = 184
-    Top = 371
+    Top = 411
     Width = 25
     Height = 15
     Anchors = [akRight, akBottom]
     Caption = 'Total'
-    ExplicitLeft = 144
   end
   object gridListaPedidos: TDBGrid
     Left = 8
-    Top = 41
+    Top = 32
     Width = 328
-    Height = 324
+    Height = 370
     Anchors = [akLeft, akTop, akRight, akBottom]
     DataSource = DataSourcePedidos
+    Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
     ReadOnly = True
     TabOrder = 0
     TitleFont.Charset = DEFAULT_CHARSET
@@ -96,8 +97,8 @@ object FormListarPedidos: TFormListarPedidos
       end>
   end
   object edtTotal: TEdit
-    Left = 216
-    Top = 368
+    Left = 215
+    Top = 408
     Width = 121
     Height = 23
     Alignment = taRightJustify

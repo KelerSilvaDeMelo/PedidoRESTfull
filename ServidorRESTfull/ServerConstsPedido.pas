@@ -40,6 +40,46 @@ const
   DB_NAME = 'pedidosDB';
   DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTfull\Win32\Debug\libmysql.dll';
 //  DB_VENDORLIB = 'C:\Provas\WK Tecnology\ServidorRESTfull\Win64\Debug\libmysql.dll';
+  DB_SERVER_CACHE = 'ServerCache\';
+  DB_SERVER_CONFIG = 'server_config.ini';
+  DB_UNKNOWN = 'Unknown database';
+
+const
+  APP_JSON = 'application/json';
+  APP_404 = 'Recurso não encontrado';
+  APP_REQUISICAO_INVALIDA = 'Formato de requisição inválido.';
+  APP_REQUISICAO_ANINHADA_INVALIDA = 'Formato de requisição aninhada inválido.';
+
+const
+  V_CLIENTE_NAO_EXISTE = 'Cliente não exite no banco de dados';
+  V_DATA_INVALIDA = 'Data inválida';
+  V_VALOR_MONETARIO_INVALIDO = 'Valor monetário inválido';
+  V_VALOR_UNITARIO_INVALIDO = 'Valor unitário inválido';
+  V_VALOR_PEDIDO_INVALIDO = 'Valor do pedido inválido';
+  V_PEDIDO_NAO_EXISTE = 'Pedido não exite no banco de dados';
+  V_PRODUTO_NAO_EXISTE = 'Produto não exite no banco de dados';
+  V_QUANTIDADE_INVALIDA = 'Quantidade inválida';
+
+const
+  ERR_LISTA_CLIENTES = 'Ocorreu uma falha ao listar os clientes';
+  ERR_LISTA_PRODUTOS = 'Ocorreu uma falha ao listar os produto';
+  ERR_LISTA_PEDIDOS = 'Ocorreu uma falha ao listar os pedidos';
+
+  ERR_INSERE_PEDIDO = 'Ocorreu uma falha ao inserir o pedido';
+  ERR_INSERE_PEDIDOITEM = 'Ocorreu uma falha ao inserir item no pedido';
+  ERR_INSERE_ITEMAUSENTE = 'Itens do pedido ausentes';
+
+  ERR_BUSCA_PEDIDO = 'Ocorreu uma falha ao buscar o pedido';
+  ERR_BUSCA_PEDIDO_NE = 'Pedido não localizado';
+
+  ERR_BUSCA_PEDIDOITENS = 'Ocorreu uma falha ao buscar itens do pedido';
+
+  ERR_EXCLUI_PEDIDO = 'Ocorreu uma falha ao excluir o pedido';
+
+const
+  SU_INSERE_PEDIDO = 'Pedido inserido com sucesso';
+  SU_INSERE_PEDIDOITEM = 'Item de pedido inserido com sucesso';
+  SU_EXCLUI_PEDIDO = 'Pedido excluido com sucesso';
 
 implementation
 

@@ -27,17 +27,21 @@ type
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
     procedure WebModule1DefaultHandlerAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure wmServerPedidoListarClientesAction(Sender: TObject;
+    procedure wmServerPedidoListaClientesAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure WebModule1ListarProdutosAction(Sender: TObject;
+    procedure WebModule1ListaProdutosAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure WebModule1ListarPedidosAction(Sender: TObject;
+    procedure WebModule1ListaPedidosAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure wmServerPedidoListarItensDoPedidoAction(Sender: TObject;
+    procedure WebModule1InserePedidoAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure WebModule1InserirPedidoAction(Sender: TObject;
+    procedure WebModule1AdicionaItemAoPedidoAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
-    procedure WebModule1AdicionarItemAoPedidoAction(Sender: TObject;
+    procedure wmServerPedidoBuscaPedidoAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure wmServerPedidoBuscaItensDoPedidoAction(Sender: TObject;
+      Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+    procedure wmServerPedidoExcluiPedidoAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 
   private
@@ -62,8 +66,15 @@ type
     procedure RetornaErro(Response: TWebResponse; Mensagem: String;
       CodigoErro: Integer);
 
-    function ValidaInserePedido(Request: TWebRequest; Response: TWebResponse;
-      var Handled: Boolean): Boolean;
+    function ListaAPI(const Rota, SQL, ParametroID, ParametroValor: String;
+                      const CodigoDeSucesso, CodigoDeErro: Integer;
+                      Response: TWebResponse; var Handled: Boolean;
+                      var MensagemDeErro: String): Boolean;
+    function InsereAPI(FDQuery: TFDQuery; const CampoID, MensagemDeSucesso: String;
+                      const CodigoDeSucesso, CodigoDeErro: Integer;
+                      Response: TWebResponse; var Handled: Boolean;
+                      var MensagemDeErro: String): Boolean;
+    function ValidaInserePedido(Request: TWebRequest; Response: TWebResponse): Boolean;
     function ValidaInserePedidoItem(Request: TWebRequest;
       Response: TWebResponse; var Handled: Boolean): Boolean;
 
@@ -94,7 +105,7 @@ uses
 { -------------------------------[ CONSTRUTOR ]------------------------------- }
 procedure TwmServerPedido.WebModuleCreate(Sender: TObject);
 begin
-  Self.FCache := ExtractFilePath(ParamStr(0)) + 'ServerCache\';
+  Self.FCache := ExtractFilePath(ParamStr(0)) + DB_SERVER_CACHE;
   if not DirectoryExists(Self.FCache) then
   begin
     CreateDir(Self.FCache);
@@ -113,7 +124,7 @@ var
   ArquivoINI, HostServer, Port, UserName, Password, Database, VendorLib: String;
   Ini: TIniFile;
 begin
-  ArquivoINI := ExtractFilePath(ParamStr(0)) + 'server_config.ini';
+  ArquivoINI := ExtractFilePath(ParamStr(0)) + DB_SERVER_CONFIG;
   HostServer := DB_HOST;
   Port := DB_PORT;
   UserName := DB_USER;
@@ -158,7 +169,7 @@ begin
     Self.cnPedidoDB.Connected := True;
   except
     on E: Exception do
-      if Pos('Unknown database', E.Message) > 0 then
+      if Pos(DB_UNKNOWN, E.Message) > 0 then
       begin
         // Se o banco de dados não existir, será criado e implantado.
         Self.CriaPedidosDB;
@@ -193,7 +204,7 @@ end;
 
 procedure TwmServerPedido.ApagaPedidosDB;
 begin
-  // Se o banco de dados não existir, será removido.
+  // Remove o banco de dados previamente criado.
   Self.cnPedidoDB.Params.Database := '';
   Self.cnPedidoDB.Open;
   Self.sqlApagaPedidoDB.ExecuteAll;
@@ -203,7 +214,7 @@ end;
 procedure TwmServerPedido.RetornaSucesso(Response: TWebResponse;
   Mensagem: String; CodigoSucesso: Integer);
 begin
-  Response.ContentType := 'application/json';
+  Response.ContentType := APP_JSON;
   Response.Content := Format('{"message": "%s"}', [Mensagem]);
   Response.StatusCode := CodigoSucesso;
 end;
@@ -211,15 +222,15 @@ end;
 procedure TwmServerPedido.RetornaSucessoLista(Response: TWebResponse;
   JSONResult: String; CodigoSucesso: Integer);
 begin
-  Response.ContentType := 'application/json';
+  Response.ContentType := APP_JSON;
   Response.Content := JSONResult;
-  Response.StatusCode := 200;
+  Response.StatusCode := CodigoSucesso;
 end;
 
 procedure TwmServerPedido.RetornaSucessoChave(Response: TWebResponse;
   Mensagem, CampoChave: String; ValorChave: Integer; CodigoSucesso: Integer);
 begin
-  Response.ContentType := 'application/json';
+  Response.ContentType := APP_JSON;
   Response.Content := Format('{"message": "%s", "%s": %d}',
     [Mensagem, CampoChave, ValorChave]);
   Response.StatusCode := CodigoSucesso;
@@ -228,67 +239,169 @@ end;
 procedure TwmServerPedido.RetornaErro(Response: TWebResponse; Mensagem: String;
   CodigoErro: Integer);
 begin
-  Response.ContentType := 'application/json';
+  Response.ContentType := APP_JSON;
   Response.Content := Format('{"error": "%d", "message": "%s"}',
     [CodigoErro, Mensagem]);
   Response.StatusCode := CodigoErro;
 end;
 
-function TwmServerPedido.ValidaInserePedido(Request: TWebRequest;
-  Response: TWebResponse; var Handled: Boolean): Boolean;
+function TwmServerPedido.ListaAPI(const Rota, SQL, ParametroID, ParametroValor: String;
+                      const CodigoDeSucesso, CodigoDeErro: Integer;
+                      Response: TWebResponse; var Handled: Boolean;
+                      var MensagemDeErro: String): Boolean;
 var
-  ClienteID, PedidoData, PedidoValor, MensagemErro: String;
+  FDQuery: TFDQuery;
+  JSONArray: TJSONArray;
+  JSONObject: TJSONObject;
+  Campo: TField;
 begin
+  Result := False;
+  FDQuery := TFDQuery.Create(nil);
+  FDQuery.Name := Rota;
+  JSONArray := TJSONArray.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := SQL;
+    if ParametroID<>'' then
+      FDQuery.ParamByName(ParametroID).Value := ParametroValor;
+
+    try
+      FDQuery.Open;
+
+      // Converte os resultados da query em JSON
+      while not FDQuery.Eof do
+      begin
+        JSONObject := TJSONObject.Create;
+
+        for Campo in FDQuery.Fields do
+        begin
+          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
+        end;
+
+        JSONArray.AddElement(JSONObject);
+        FDQuery.Next;
+      end;
+
+      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoLista(Response, JSONArray.ToString, CodigoDeSucesso);
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        MensagemDeErro := MensagemDeErro + #13#10
+                        + E.Message;
+        Self.RetornaErro(Response, MensagemDeErro, CodigoDeErro);
+        Handled := True;
+      end;
+    end;
+  finally
+    FDQuery.Free;
+    JSONArray.Free;
+  end;
+end;
+
+function TwmServerPedido.InsereAPI(FDQuery: TFDQuery; const CampoID, MensagemDeSucesso: String;
+                      const CodigoDeSucesso, CodigoDeErro: Integer;
+                      Response: TWebResponse; var Handled: Boolean;
+                      var MensagemDeErro: String): Boolean;
+var
+  ValorID: Integer;
+begin
+  try
+    FDQuery.ExecSQL;
+
+    // Obter o ID gerado do pedido
+    ValorID := Self.cnPedidoDB.GetLastAutoGenValue(CampoID);
+
+    // Retorna uma resposta de sucesso com o ID do pedido criado
+    Self.RetornaSucessoChave(Response, MensagemDeSucesso, CampoID, ValorID, CodigoDeSucesso);
+  except
+    on E: Exception do
+    begin
+      MensagemDeErro := MensagemDeErro + #13#10
+                      + E.Message;
+      Self.RetornaErro(Response, MensagemDeErro, CodigoDeErro);
+      Handled := True;
+    end;
+  end;
+end;
+
+function TwmServerPedido.ValidaInserePedido(Request: TWebRequest;
+  Response: TWebResponse): Boolean;
+var
+  ClienteID, PedidoData, MensagemErro: String;
+  PedidoValor: Currency;
+  JSONRequest: TJSONObject;
+begin
+  JSONRequest := TJSONObject.ParseJSONValue(Request.Content) as TJSONObject;
+
+  if not Assigned(JSONRequest) then
+  begin
+    Self.RetornaErro(Response, APP_REQUISICAO_INVALIDA, 400);
+    Result := False;
+    Exit;
+  end;
+
   // Valida ClienteID
-  ClienteID := Request.ContentFields.Values['cliente_id'];
+  ClienteID := JSONRequest.GetValue<String>('codigo_cliente');
   Result := Self.ClienteExiste(ClienteID);
   if not Result then
   begin
-    MensagemErro := 'Cliente ' + ClienteID + ' não exites no banco de dados.';
+    MensagemErro := V_CLIENTE_NAO_EXISTE + #13#10
+                  + 'Codigo Cliente: ' + ClienteID;
     Self.RetornaErro(Response, MensagemErro, 400);
-    Handled := True;
     Exit;
   end;
 
   // Valida PedidoData
-  PedidoData := Request.ContentFields.Values['data'];
+  PedidoData := JSONRequest.GetValue<String>('data_emissao_pedido');
   Result := Self.DataConsistente(PedidoData);
   if not Result then
   begin
-    MensagemErro := 'Data inválida ' + PedidoData + '.';
+    MensagemErro := V_DATA_INVALIDA + #13#10
+                  + PedidoData;
     Self.RetornaErro(Response, MensagemErro, 400);
-    Handled := True;
     Exit;
   end;
 
   // Valida PedidoValor
-  PedidoValor := Request.ContentFields.Values['valor_total'];
+  try
+    PedidoValor := JSONRequest.GetValue<Currency>('valor_total_pedido');
+  except on E: Exception do
+    begin
+      MensagemErro := V_VALOR_MONETARIO_INVALIDO + #13#10
+                    + JSONRequest.GetValue<String>('valor_total_pedido');
+      Result := False;
+    end;
+  end;
+  {
   Result := Self.ValorMonetarioConsistente(PedidoValor);
   if not Result then
   begin
-    MensagemErro := 'Valor monetário inválido ' + PedidoValor + '.';
+    MensagemErro := V_VALOR_PEDIDO_INVALIDO + #13#10
+                  + PedidoValor;
     Self.RetornaErro(Response, MensagemErro, 400);
-    Handled := True;
     Exit;
   end;
+  }
 end;
 
 function TwmServerPedido.ValidaInserePedidoItem(Request: TWebRequest;
   Response: TWebResponse; var Handled: Boolean): Boolean;
 var
-  FDQuery: TFDQuery;
   PedidoID, ProdutoID: String;
-  Quantidade, ValorUnitario, ValorTotal: Currency;
+  Quantidade, ValorUnitario: Currency;
   MensagemErro: String;
 begin
-  Result := True;
-
   // Valida PedidoID (numero_pedido)
   PedidoID := Request.ContentFields.Values['numero_pedido'];
   Result := PedidoExiste(PedidoID);
   if not Result then
   begin
-    MensagemErro := 'Pedido ' + PedidoID + ' não existe.';
+    MensagemErro := V_PEDIDO_NAO_EXISTE + #13#10
+                  + 'Pedido ID: ' + PedidoID;
     Self.RetornaErro(Response, MensagemErro, 400);
     Handled := True;
     Exit;
@@ -299,7 +412,8 @@ begin
   Result := ProdutoExiste(ProdutoID);
   if not Result then
   begin
-    MensagemErro := 'Produto ' + ProdutoID + ' não existe.';
+    MensagemErro := V_PRODUTO_NAO_EXISTE + #13#10
+                  + 'Produto ID: ' + ProdutoID;
     Self.RetornaErro(Response, MensagemErro, 400);
     Handled := True;
     Exit;
@@ -310,7 +424,7 @@ begin
     and (Quantidade > 0);
   if not Result then
   begin
-    MensagemErro := 'Quantidade inválida.';
+    MensagemErro := V_QUANTIDADE_INVALIDA;
     Self.RetornaErro(Response, MensagemErro, 400);
     Handled := True;
     Exit;
@@ -321,7 +435,7 @@ begin
     ValorUnitario) and (ValorUnitario > 0);
   if not Result then
   begin
-    MensagemErro := 'Valor unitário inválido.';
+    MensagemErro := V_VALOR_UNITARIO_INVALIDO;
     Self.RetornaErro(Response, MensagemErro, 400);
     Handled := True;
     Exit;
@@ -339,11 +453,7 @@ begin
   FDQuery := TFDQuery.Create(nil);
   try
     FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := '''
-      SELECT COUNT(*) AS Total
-      FROM clientes cli
-      WHERE cli.codigo = :cliente_id
-      ''';
+    FDQuery.SQL.Text := SQL_ClienteExiste;
     FDQuery.ParamByName('cliente_id').AsString := ClienteID;
     FDQuery.Open;
 
@@ -365,11 +475,7 @@ begin
   FDQuery := TFDQuery.Create(nil);
   try
     FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := '''
-      SELECT COUNT(*) AS Total
-      FROM produtos prod
-      WHERE prod.codigo = :codigo_produto
-      ''';
+    FDQuery.SQL.Text := SQL_ProdutoExiste;
     FDQuery.ParamByName('codigo_produto').AsString := ProdutoID;
     FDQuery.Open;
 
@@ -390,11 +496,7 @@ begin
   FDQuery := TFDQuery.Create(nil);
   try
     FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := '''
-      SELECT COUNT(*) AS Total
-      FROM pedidos ped
-      WHERE ped.numero_pedido = :numero_pedido';
-      ''';
+    FDQuery.SQL.Text := SQL_PedidoExiste;
     FDQuery.ParamByName('numero_pedido').AsString := PedidoID;
     FDQuery.Open;
 
@@ -440,7 +542,7 @@ begin
   Writeln('#REQUEST APIStatus');
   Writeln(Request.Content);
 
-  Response.ContentType := 'application/json';
+  Response.ContentType := APP_JSON;
   Response.Content := '{"status": "OK", "message": "Servidor está ativo"}';
   Response.StatusCode := 200;
   Handled := True;
@@ -458,7 +560,7 @@ begin
   Writeln('#REQUEST Index');
   Writeln(Request.Content);
 
-  Mensagem := 'Recurso não encontrado';
+  Mensagem := APP_404;
   Self.RetornaErro(Response, Mensagem, 404);
   Handled := True;
 
@@ -466,299 +568,185 @@ begin
   Writeln(Response.Content);
 end;
 
-// Rota @ListarClientes
-procedure TwmServerPedido.wmServerPedidoListarClientesAction(Sender: TObject;
+// Rota @ListaClientes
+procedure TwmServerPedido.wmServerPedidoListaClientesAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 var
-  FDQuery: TFDQuery;
-  JSONArray: TJSONArray;
-  JSONObject: TJSONObject;
-  Campo: TField;
-  Mensagem: String;
+  Rota, SQL, ParametroID, ParametroValor, MensagemDeErro: String;
+  CodigoDeSucesso, CodigoDeErro: Integer;
 begin
-  Writeln('#REQUEST ListarClientes');
+  Writeln('#REQUEST ListaClientes');
   Writeln(Request.Content);
 
-  FDQuery := TFDQuery.Create(nil);
-  FDQuery.Name := 'rotaListarClientes';
-  JSONArray := TJSONArray.Create;
-  try
-    FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := SQL_ListarClientes;
-    try
-      FDQuery.Open;
+  Rota := 'rotaListaClientes';
+  SQL := SQL_ListarClientes;
+  ParametroID := '';
+  ParametroValor := '';
+  CodigoDeSucesso := 200;
+  CodigoDeErro := 500;
+  MensagemDeErro := ERR_LISTA_CLIENTES;
 
-      // Converte os resultados da query em JSON
-      while not FDQuery.Eof do
-      begin
-        JSONObject := TJSONObject.Create;
+  Self.ListaAPI(Rota, SQL, ParametroID, ParametroValor
+               , CodigoDeSucesso, CodigoDeErro
+               , Response, Handled, MensagemDeErro );
 
-        for Campo in FDQuery.Fields do
-        begin
-          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
-        end;
-
-        JSONArray.AddElement(JSONObject);
-        FDQuery.Next;
-      end;
-
-      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
-
-      // Retorna o resultado em formato JSON
-      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
-    except
-      on E: Exception do
-      begin
-        Mensagem := 'Ocorreu uma falha ao listar os clientes:'#13 + E.Message;
-        Self.RetornaErro(Response, E.Message, 500);
-        Handled := True;
-      end;
-    end;
-  finally
-    FDQuery.Free;
-    JSONArray.Free;
-  end;
-
-  Writeln('#RESPONSE ListarClientes');
+  Writeln('#RESPONSE ListaClientes');
   Writeln(Response.Content);
 end;
 
-// Rota @ListarProdutos
-procedure TwmServerPedido.WebModule1ListarProdutosAction(Sender: TObject;
+
+// Rota @ListaProdutos
+procedure TwmServerPedido.WebModule1ListaProdutosAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 var
-  FDQuery: TFDQuery;
-  JSONArray: TJSONArray;
-  JSONObject: TJSONObject;
-  Campo: TField;
-  Mensagem: String;
+  Rota, SQL, ParametroID, ParametroValor, MensagemDeErro: String;
+  CodigoDeSucesso, CodigoDeErro: Integer;
 begin
-  Writeln('#REQUEST ListarProdutos');
+  Writeln('#REQUEST ListaProdutos');
   Writeln(Request.Content);
 
-  FDQuery := TFDQuery.Create(nil);
-  FDQuery.Name := 'rotaListarProdutos';
-  JSONArray := TJSONArray.Create;
-  try
-    FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := SQL_ListarProdutos;
-    try
-      FDQuery.Open;
+  Rota := 'rotaListaProdutos';
+  SQL := SQL_ListarProdutos;
+  ParametroID := '';
+  ParametroValor := '';
+  CodigoDeSucesso := 200;
+  CodigoDeErro := 500;
+  MensagemDeErro := ERR_LISTA_PRODUTOS;
 
-      // Converte os resultados da query em JSON
-      while not FDQuery.Eof do
-      begin
-        JSONObject := TJSONObject.Create;
+  Self.ListaAPI(Rota, SQL, ParametroID, ParametroValor
+               , CodigoDeSucesso, CodigoDeErro
+               , Response, Handled, MensagemDeErro );
 
-        for Campo in FDQuery.Fields do
-        begin
-          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
-        end;
-
-        JSONArray.AddElement(JSONObject);
-        FDQuery.Next;
-      end;
-
-      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
-
-      // Retorna o resultado em formato JSON
-      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
-    except
-      on E: Exception do
-      begin
-        Mensagem := 'Ocorreu uma falha ao tentar listar os produtos:'#13 +
-          E.Message;
-        Self.RetornaErro(Response, E.Message, 500);
-        Handled := True;
-      end;
-    end;
-  finally
-    FDQuery.Free;
-    JSONArray.Free;
-  end;
-
-  Writeln('#RESPONSE ListarProdutos');
+  Writeln('#RESPONSE ListaProdutos');
   Writeln(Response.Content);
 end;
 
-// Rota @ListarPedidos
-procedure TwmServerPedido.WebModule1ListarPedidosAction(Sender: TObject;
+// Rota @ListaPedidos
+procedure TwmServerPedido.WebModule1ListaPedidosAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 var
-  FDQuery: TFDQuery;
-  JSONArray: TJSONArray;
-  JSONObject: TJSONObject;
-  Campo: TField;
-  Mensagem: String;
+  Rota, SQL, ParametroID, ParametroValor, MensagemDeErro: String;
+  CodigoDeSucesso, CodigoDeErro: Integer;
 begin
-  Writeln('#REQUEST ListarPedidos');
+  Writeln('#REQUEST ListaPedidos');
   Writeln(Request.Content);
 
-  FDQuery := TFDQuery.Create(nil);
-  FDQuery.Name := 'rotaListarPedidos';
-  JSONArray := TJSONArray.Create;
-  try
-    FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := SQL_ListarPedidos;
-    try
-      FDQuery.Open;
+  Rota := 'rotaListaPedidos';
+  SQL := SQL_ListarPedidos;
+  ParametroID := '';
+  ParametroValor := '';
+  CodigoDeSucesso := 200;
+  CodigoDeErro := 500;
+  MensagemDeErro := ERR_LISTA_PEDIDOS;
 
-      // Converte os resultados da query em JSON
-      while not FDQuery.Eof do
-      begin
-        JSONObject := TJSONObject.Create;
+  Self.ListaAPI(Rota, SQL, ParametroID, ParametroValor
+               , CodigoDeSucesso, CodigoDeErro
+               , Response, Handled, MensagemDeErro );
 
-        for Campo in FDQuery.Fields do
-        begin
-          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
-        end;
-
-        JSONArray.AddElement(JSONObject);
-        FDQuery.Next;
-      end;
-
-      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
-
-      // Retorna o resultado em formato JSON
-      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
-    except
-      on E: Exception do
-      begin
-        Mensagem := 'Ocorreu uma falha ao tentar listar os pedidos: '#13 +
-          E.Message;
-        Self.RetornaErro(Response, Mensagem, 500);
-        Handled := True;
-      end;
-    end;
-  finally
-    FDQuery.Free;
-    JSONArray.Free;
-  end;
-
-  Writeln('#RESPONSE ListarPedidos');
+  Writeln('#RESPONSE ListaPedidos');
   Writeln(Response.Content);
 end;
 
-// Rota @ListarItensDoPedido
-procedure TwmServerPedido.wmServerPedidoListarItensDoPedidoAction
-  (Sender: TObject; Request: TWebRequest; Response: TWebResponse;
-  var Handled: Boolean);
-var
-  FDQuery: TFDQuery;
-  JSONArray: TJSONArray;
-  JSONObject: TJSONObject;
-  Campo: TField;
-  InstrucaoSQL, Mensagem: String;
-begin
-  Writeln('#REQUEST ListarItensDoPedido');
-  Writeln(Request.Content);
-
-  FDQuery := TFDQuery.Create(nil);
-  FDQuery.Name := 'rotaListarItensDoPedido';
-  JSONArray := TJSONArray.Create;
-  try
-    FDQuery.Connection := Self.cnPedidoDB;
-    FDQuery.SQL.Text := SQL_ListarItensDoPedido;    try
-      FDQuery.Open;
-
-      // Converte os resultados da query em JSON
-      while not FDQuery.Eof do
-      begin
-        JSONObject := TJSONObject.Create;
-
-        for Campo in FDQuery.Fields do
-        begin
-          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
-        end;
-
-        JSONArray.AddElement(JSONObject);
-        FDQuery.Next;
-      end;
-
-      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
-
-      // Retorna o resultado em formato JSON
-      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
-    except
-      on E: Exception do
-      begin
-        Mensagem := 'Ocorreu uma falha ao tentar listar os pedidos: '#13 +
-          E.Message;
-        Self.RetornaErro(Response, Mensagem, 500);
-        Handled := True;
-      end;
-    end;
-  finally
-    FDQuery.Free;
-    JSONArray.Free;
-  end;
-
-  Writeln('#RESPONSE ListarItensDoPedido');
-  Writeln(Response.Content);
-end;
-
-// Rota @InserirPedido
-procedure TwmServerPedido.WebModule1InserirPedidoAction(Sender: TObject;
+// Rota @InserePedido
+procedure TwmServerPedido.WebModule1InserePedidoAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 var
   FDQuery: TFDQuery;
-  PedidoID: Integer;
-  Mensagem: String;
+  JSONRequest, JSONItens: TJSONObject;
+  JSONArrayItens: TJSONArray;
+  JSONItem: TJSONObject;
+  I, PedidoID: Integer;
+  MensagemDeErro: String;
 begin
-  Writeln('#REQUEST InserirPedido');
+  Writeln('#REQUEST InserePedido');
   Writeln(Request.Content);
 
-  if Self.ValidaInserePedido(Request, Response, Handled) then
+  JSONRequest := TJSONObject.ParseJSONValue(Request.Content) as TJSONObject;
+  if not Assigned(JSONRequest) then
   begin
+    Self.RetornaErro(Response, APP_REQUISICAO_INVALIDA, 400);
+    Handled := True;
+    Exit;
+  end;
+
+  try
+    if not Self.ValidaInserePedido(Request, Response) then
+    begin
+      Handled := True;
+      Exit;
+    end;
+
     FDQuery := TFDQuery.Create(nil);
     try
       FDQuery.Connection := Self.cnPedidoDB;
-      FDQuery.SQL.Text := SQL_InserirPedido;
-      FDQuery.ParamByName('cliente_id').AsInteger :=
-        StrToInt(Request.ContentFields.Values['cliente_id']);
-      FDQuery.ParamByName('data_emissao').AsDate :=
-        StrToDate(Request.ContentFields.Values['data']);
-      FDQuery.ParamByName('valor_total').AsFloat :=
-        StrToFloat(Request.ContentFields.Values['valor_total']);
+      FDQuery.Connection.StartTransaction;  // Inicia a transação
 
       try
+        // Insere o pedido no banco de dados
+        FDQuery.SQL.Text := SQL_InserirPedido;
+        FDQuery.ParamByName('codigo_cliente').AsInteger := JSONRequest.GetValue<Integer>('codigo_cliente');
+        FDQuery.ParamByName('data_emissao_pedido').AsDate := StrToDate(JSONRequest.GetValue<string>('data_emissao_pedido'));
+        FDQuery.ParamByName('valor_total_pedido').AsFloat := JSONRequest.GetValue<Double>('valor_total_pedido');
         FDQuery.ExecSQL;
 
         // Obter o ID gerado do pedido
         PedidoID := Self.cnPedidoDB.GetLastAutoGenValue('numero_pedido');
 
-        // Retorna uma resposta de sucesso com o ID do pedido criado
-        Mensagem := 'Pedido criado com sucesso';
-        Self.RetornaSucessoChave(Response, Mensagem, 'pedido_id',
-          PedidoID, 201);
+        // Processar os itens do pedido
+        JSONArrayItens := JSONRequest.GetValue<TJSONArray>('itens');
+        if not Assigned(JSONArrayItens) then
+        begin
+          raise Exception.Create(ERR_INSERE_ITEMAUSENTE);
+        end;
+
+        for I := 0 to JSONArrayItens.Count - 1 do
+        begin
+          JSONItem := JSONArrayItens.Items[I] as TJSONObject;
+
+          // Insere cada item no banco de dados
+          FDQuery.SQL.Text := SQL_AdicionarItemAoPedido;
+          FDQuery.ParamByName('sequencia_pedido').AsInteger := PedidoID;
+          FDQuery.ParamByName('codigo_produto').AsInteger := JSONItem.GetValue<Integer>('codigo_produto');
+          FDQuery.ParamByName('quantidade_produto').AsFloat := JSONItem.GetValue<Double>('quantidade_produto');
+          FDQuery.ParamByName('valor_unitario_produto').AsFloat := JSONItem.GetValue<Double>('valor_unitario_produto');
+          FDQuery.ParamByName('valor_total_produto').AsFloat := JSONItem.GetValue<Double>('valor_total_produto');
+          FDQuery.ExecSQL;
+        end;
+
+        FDQuery.Connection.Commit;  // Confirma a transação
+
+        // Retorna sucesso com o ID do pedido criado
+        Self.RetornaSucessoChave(Response, SU_INSERE_PEDIDO, 'numero_pedido', PedidoID, 201);
       except
         on E: Exception do
         begin
-          Mensagem := 'Ocorreu uma falha ao tentar inserir o pedido:'#13 +
-            E.Message;
-          Self.RetornaErro(Response, Mensagem, 500);
-          Handled := True;
+          FDQuery.Connection.Rollback;  // Desfaz a transação se algo falhar
+          MensagemDeErro := ERR_INSERE_PEDIDO + #13#10 + E.Message;
+          Self.RetornaErro(Response, MensagemDeErro, 500);
+          Exit;
         end;
       end;
     finally
       FDQuery.Free;
     end;
+  finally
+    JSONRequest.Free;
   end;
 
-  Writeln('#RESPONSE InserirPedido');
+  Writeln('#RESPONSE InserePedido');
   Writeln(Response.Content);
 end;
 
-// Rota @AdicionarItemAoPedido
-procedure TwmServerPedido.WebModule1AdicionarItemAoPedidoAction(Sender: TObject;
+// Rota @AdicionaItemAoPedido
+procedure TwmServerPedido.WebModule1AdicionaItemAoPedidoAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 var
   FDQuery: TFDQuery;
   PedidoID, ProdutoID: Integer;
   Quantidade, ValorUnitario, ValorTotal: Currency;
-  Mensagem: String;
+  MensagemDeErro: String;
 begin
-  Writeln('#REQUEST AdicionarItemAoPedido');
+  Writeln('#REQUEST AdicionaItemAoPedido');
   Writeln(Request.Content);
 
   if Self.ValidaInserePedidoItem(Request, Response, Handled) then
@@ -777,28 +765,185 @@ begin
       FDQuery.ParamByName('valor_unitario').AsCurrency := ValorUnitario;
       FDQuery.ParamByName('valor_total').AsCurrency := ValorTotal;
 
-      try
-        FDQuery.ExecSQL;
-
-        // Retorna sucesso
-        Mensagem := 'Item inserido com sucesso';
-        Self.RetornaSucesso(Response, Mensagem, 201);
-      except
-        on E: Exception do
-        begin
-          Mensagem := 'Ocorreu uma falha ao tentar inserir o item:'#13 +
-            E.Message;
-          Self.RetornaErro(Response, Mensagem, 500);
-          Handled := True;
-        end;
-      end;
+      MensagemDeErro := ERR_INSERE_PEDIDOITEM;
+      Self.InsereAPI(FDQuery, 'id', SU_INSERE_PEDIDOITEM, 201, 500, Response, Handled, MensagemDeErro);
     finally
       FDQuery.Free;
     end;
   end;
 
-  Writeln('#RESPONSE AdicionarItemAoPedido');
+  Writeln('#RESPONSE AdicionaItemAoPedido');
   Writeln(Response.Content);
 end;
+
+
+// Rota @BuscaPedido
+procedure TwmServerPedido.wmServerPedidoBuscaPedidoAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  PedidoID: String;
+  FDQuery: TFDQuery;
+  JSONArray: TJSONArray;
+  JSONObject: TJSONObject;
+  Campo: TField;
+  Mensagem: String;
+begin
+  Writeln('#REQUEST BuscaPedido');
+  Writeln(Request.Content);
+
+  PedidoID := Request.ContentFields.Values['numero_pedido'];
+  FDQuery := TFDQuery.Create(nil);
+  FDQuery.Name := 'rotaBuscaPedido';
+  JSONArray := TJSONArray.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := SQL_BuscaPedido;
+    FDQuery.ParamByName('numero_pedido').AsString := PedidoID;
+    try
+      FDQuery.Open;
+
+      // Converte os resultados da query em JSON
+      while not FDQuery.Eof do
+      begin
+        JSONObject := TJSONObject.Create;
+
+        for Campo in FDQuery.Fields do
+        begin
+          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
+        end;
+
+        JSONArray.AddElement(JSONObject);
+        FDQuery.Next;
+      end;
+
+      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
+    except
+      on E: Exception do
+      begin
+        Mensagem := ERR_BUSCA_PEDIDO + #13#10
+                  + E.Message;
+        Self.RetornaErro(Response, Mensagem, 500);
+        Handled := True;
+      end;
+    end;
+  finally
+    FDQuery.Free;
+    JSONArray.Free;
+  end;
+
+  Writeln('#RESPONSE BuscaPedido');
+  Writeln(Response.Content);
+end;
+
+// Rota @BuscaItensDoPedido
+procedure TwmServerPedido.wmServerPedidoBuscaItensDoPedidoAction(
+  Sender: TObject; Request: TWebRequest; Response: TWebResponse;
+  var Handled: Boolean);
+var
+  PedidoID: String;
+  FDQuery: TFDQuery;
+  JSONArray: TJSONArray;
+  JSONObject: TJSONObject;
+  Campo: TField;
+  Mensagem: String;
+begin
+  Writeln('#REQUEST BuscaItensDoPedido');
+  Writeln(Request.Content);
+
+  PedidoID := Request.ContentFields.Values['numero_pedido'];
+  FDQuery := TFDQuery.Create(nil);
+  FDQuery.Name := 'rotaBuscaItensDoPedido';
+  JSONArray := TJSONArray.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := SQL_BuscaItensDoPedido;
+    FDQuery.ParamByName('numero_pedido').AsString := PedidoID;
+    try
+      FDQuery.Open;
+
+      // Converte os resultados da query em JSON
+      while not FDQuery.Eof do
+      begin
+        JSONObject := TJSONObject.Create;
+
+        for Campo in FDQuery.Fields do
+        begin
+          JSONObject.AddPair(Campo.FieldName, Campo.AsString);
+        end;
+
+        JSONArray.AddElement(JSONObject);
+        FDQuery.Next;
+      end;
+
+      FDQuery.SaveToFile(Self.FCache + FDQuery.Name + '.json', sfJSON);
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoLista(Response, JSONArray.ToString, 200);
+    except
+      on E: Exception do
+      begin
+        Mensagem := ERR_BUSCA_PEDIDOITENS + #13#10
+                  + E.Message;
+        Self.RetornaErro(Response, Mensagem, 500);
+        Handled := True;
+      end;
+    end;
+  finally
+    FDQuery.Free;
+    JSONArray.Free;
+  end;
+
+  Writeln('#RESPONSE BuscaItensDoPedido');
+  Writeln(Response.Content);
+end;
+
+// Rota @ExcluiPedido
+procedure TwmServerPedido.wmServerPedidoExcluiPedidoAction(Sender: TObject;
+  Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
+var
+  PedidoID: String;
+  FDQuery: TFDQuery;
+  JSONArray: TJSONArray;
+  JSONObject: TJSONObject;
+  Campo: TField;
+  Mensagem: String;
+begin
+  Writeln('#REQUEST ExcluiPedido');
+  Writeln(Request.Content);
+
+  PedidoID := Request.ContentFields.Values['numero_pedido'];
+  FDQuery := TFDQuery.Create(nil);
+  FDQuery.Name := 'rotaExcluiPedido';
+  JSONArray := TJSONArray.Create;
+  try
+    FDQuery.Connection := Self.cnPedidoDB;
+    FDQuery.SQL.Text := SQL_ExcluiPedido;
+    FDQuery.ParamByName('numero_pedido').AsString := PedidoID;
+    try
+      FDQuery.ExecSQL;
+
+      // Retorna o resultado em formato JSON
+      Self.RetornaSucessoChave(Response, SU_EXCLUI_PEDIDO, 'numero_pedido', PedidoId.ToInteger, 200);
+    except
+      on E: Exception do
+      begin
+        Mensagem := ERR_EXCLUI_PEDIDO + #13#10
+                  + E.Message;
+        Self.RetornaErro(Response, Mensagem, 500);
+        Handled := True;
+      end;
+    end;
+  finally
+    FDQuery.Free;
+    JSONArray.Free;
+  end;
+
+  Writeln('#RESPONSE ExcluiPedido');
+  Writeln(Response.Content);
+end;
+
 
 end.

@@ -1,0 +1,115 @@
+object FormListarPedidos: TFormListarPedidos
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu, biMaximize]
+  Caption = 'Listar Pedidos'
+  ClientHeight = 441
+  ClientWidth = 344
+  Color = clBtnFace
+  Constraints.MinHeight = 480
+  Constraints.MinWidth = 360
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  Position = poScreenCenter
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  DesignSize = (
+    344
+    441)
+  TextHeight = 15
+  object Label1: TLabel
+    Left = 8
+    Top = 20
+    Width = 91
+    Height = 15
+    Hint = 'Preenchimento obrigat'#243'rio'
+    Caption = 'Lista dos pedidos'
+  end
+  object lbRegistros: TLabel
+    Left = 8
+    Top = 411
+    Width = 65
+    Height = 15
+    Anchors = [akLeft, akBottom]
+    Caption = '0 Registro(s)'
+  end
+  object lbTotal: TLabel
+    Left = 184
+    Top = 411
+    Width = 25
+    Height = 15
+    Anchors = [akRight, akBottom]
+    Caption = 'Total'
+  end
+  object gridListaPedidos: TDBGrid
+    Left = 8
+    Top = 41
+    Width = 328
+    Height = 361
+    Anchors = [akLeft, akTop, akRight, akBottom]
+    DataSource = DataSourcePedidos
+    Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
+    ReadOnly = True
+    TabOrder = 0
+    TitleFont.Charset = DEFAULT_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -12
+    TitleFont.Name = 'Segoe UI'
+    TitleFont.Style = []
+    Columns = <
+      item
+        Expanded = False
+        FieldName = 'sequencia_pedido'
+        Title.Caption = 'N'#186
+        Width = 22
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'codigo_cliente'
+        Visible = False
+      end
+      item
+        Expanded = False
+        FieldName = 'nome_cliente'
+        Title.Caption = 'CLIENTE'
+        Width = 120
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'data_emissao_pedido'
+        Title.Alignment = taCenter
+        Title.Caption = 'DATA'
+        Width = 65
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'valor_total_pedido'
+        Title.Alignment = taRightJustify
+        Title.Caption = 'VALOR'
+        Width = 80
+        Visible = True
+      end>
+  end
+  object edtTotal: TEdit
+    Left = 216
+    Top = 408
+    Width = 121
+    Height = 23
+    Alignment = taRightJustify
+    Anchors = [akRight, akBottom]
+    ReadOnly = True
+    TabOrder = 1
+  end
+  object DataSourcePedidos: TDataSource
+    AutoEdit = False
+    DataSet = dmPedidoAPI.memPedidos
+    Left = 256
+    Top = 288
+  end
+end

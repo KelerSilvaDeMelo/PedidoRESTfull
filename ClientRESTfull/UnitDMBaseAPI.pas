@@ -82,10 +82,11 @@ var
 begin
   MensagemErro := '';
   Self.LerConfigIni;
+
+  HTTPClient := TIdHTTP.Create(nil);
+  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  HTTPClient.IOHandler := SSLHandler;
   try
-    HTTPClient := TIdHTTP.Create(nil);
-    SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-    HTTPClient.IOHandler := SSLHandler;
 
     // Monta a URL de teste
     Url := Format('http://%s:%s/APIStatus', [FServerHost, FServerPort]);

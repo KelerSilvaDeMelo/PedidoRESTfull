@@ -31,7 +31,6 @@ object FormClientPedidos: TFormClientPedidos
     Images = ImageList1
     TabOrder = 0
     Visible = False
-    ExplicitLeft = 54
   end
   object Button2: TButton
     Left = 74
@@ -45,7 +44,6 @@ object FormClientPedidos: TFormClientPedidos
     Images = ImageList1
     TabOrder = 1
     Visible = False
-    ExplicitLeft = 54
   end
   object ActivityIndicator1: TActivityIndicator
     Left = 140
@@ -53,7 +51,6 @@ object FormClientPedidos: TFormClientPedidos
     Anchors = []
     Animate = True
     IndicatorSize = aisXLarge
-    ExplicitLeft = 120
   end
   object ActionList1: TActionList
     Images = ImageList1

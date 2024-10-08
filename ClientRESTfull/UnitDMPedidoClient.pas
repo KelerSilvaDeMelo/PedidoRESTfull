@@ -10,11 +10,6 @@ uses
 
 type
   TdmPedidoClient = class(TDataModule)
-    memPedidoCapa: TFDMemTable;
-    pcSequencia: TFDAutoIncField;
-    pcCodigoCliente: TIntegerField;
-    pcDataEmissao: TDateField;
-    pcValorTotalPedido: TBCDField;
     memPedidoItem: TFDMemTable;
     piCodigoProduto: TIntegerField;
     piQuantidadeProduto: TIntegerField;
@@ -27,28 +22,42 @@ type
     itensQuantidadeProduto: TBCDField;
     itensValorUnitarioProduto: TBCDField;
     itensValorTotalProduto: TBCDField;
+    memPedidoCapa: TFDMemTable;
+    pcSequencia: TFDAutoIncField;
+    CapaPedidoCliente: TIntegerField;
+    StringField1: TStringField;
+    pcDataEmissao: TDateField;
+    pcValorTotalPedido: TBCDField;
+
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
     procedure piCodigoProdutoChange(Sender: TField);
+
   private
     { Private symbols }
     FPedidoAPI: TdmPedidoAPI;
+
   private
     { Private declarations }
+
   public
     { Public declarations }
-    function NovoPedido(MensagemDeErro: String): Boolean;
+    function NovoPedido(var MensagemDeErro: String): Boolean;
     function ProdutoExiste: Boolean;
     function BuscaValorDoProduto(CodigoDoProduto: Integer): Currency;
-    function IncluirItem(Descricao: String): Boolean;
+    function IncluirItem(const Descricao: String; var MensagemDeErro: String): Boolean;
     procedure RecalculaTotais;
-    procedure ApagaItemPosicionado;
+    procedure ExcluiItemPosicionado;
     function EnviaNovoPedido(DataDaEmissao: TDate; var MensagemDeErro: String): Boolean;
+    function BuscaPedido(CodigoDoPedido: Integer; var MensagemDeErro: string): Boolean;
+    function ExcluiPedido(CodigoDoPedido: Integer; var MensagemDeErro: String): Boolean;
   end;
 
 implementation
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
+
+uses ClientConstsPedido;
 
 {$R *.dfm}
 
@@ -80,7 +89,7 @@ end;
 
 
 {---------------------------------[ PUBLICO ]----------------------------------}
-function TdmPedidoClient.NovoPedido(MensagemDeErro: String): Boolean;
+function TdmPedidoClient.NovoPedido(var MensagemDeErro: String): Boolean;
 begin
   Result := (Self.FPedidoAPI.ListarClientes(MensagemDeErro) and
     Self.FPedidoAPI.ListarProdutos(MensagemDeErro));
@@ -114,27 +123,24 @@ begin
   Result := Self.FPedidoAPI.BuscaValorDoProduto(CodigoDoProduto);
 end;
 
-function TdmPedidoClient.IncluirItem(Descricao: String): Boolean;
+function TdmPedidoClient.IncluirItem(const Descricao: String; var MensagemDeErro: String): Boolean;
 begin
-  Self.memItensDoPedido.Append;
-  Self.ItensCodigoProduto.Value := Self.piCodigoProduto.Value;
-  Self.itensDescricaoProduto.Value := Descricao;
-  Self.itensQuantidadeProduto.Value := Self.piQuantidadeProduto.Value;
-  Self.itensValorUnitarioProduto.Value := Self.piValorUnitarioProduto.Value;
-  Self.memItensDoPedido.Post;
+  Result := False;
+  try
+    Self.memItensDoPedido.Append;
+    Self.ItensCodigoProduto.Value := Self.piCodigoProduto.Value;
+    Self.itensDescricaoProduto.AsString := Descricao;
+    Self.itensQuantidadeProduto.Value := Self.piQuantidadeProduto.Value;
+    Self.itensValorUnitarioProduto.Value := Self.piValorUnitarioProduto.Value;
+    Self.memItensDoPedido.Post;
 
-  Self.piQuantidadeProduto.Clear;
-  Self.piValorUnitarioProduto.Clear;
+    Self.piQuantidadeProduto.Clear;
+    Self.piValorUnitarioProduto.Clear;
 
-  Self.RecalculaTotais;
-end;
-
-procedure TdmPedidoClient.ApagaItemPosicionado;
-begin
-  if not Self.memItensDoPedido.IsEmpty then
-  begin
-    Self.memItensDoPedido.Delete;
     Self.RecalculaTotais;
+    Result := True
+  except on E: Exception do
+    MensagemDeErro := MensagemDeErro + #13#10 + E.Message;
   end;
 end;
 
@@ -143,7 +149,6 @@ var
   Marcador: TBookmark;
   TotalDoItem, SomatoriaDoPedido: Currency;
 begin
-  TotalDoItem := 0.00;
   SomatoriaDoPedido := 0.00;
   Marcador := Self.memItensDoPedido.Bookmark;
 
@@ -172,10 +177,45 @@ begin
   Self.pcValorTotalPedido.AsCurrency := SomatoriaDoPedido;
 end;
 
+procedure TdmPedidoClient.ExcluiItemPosicionado;
+begin
+  if not Self.memItensDoPedido.IsEmpty then
+  begin
+    Self.memItensDoPedido.Delete;
+    Self.RecalculaTotais;
+  end;
+end;
+
 function TdmPedidoClient.EnviaNovoPedido(DataDaEmissao: TDate; var MensagemDeErro: String): Boolean;
 begin
   Self.pcDataEmissao.AsDateTime := DataDaEmissao;
   Result := Self.FPedidoAPI.EnviaNovoPedido(memPedidoCapa, memItensDoPedido, MensagemDeErro);
+end;
+
+function TdmPedidoClient.BuscaPedido(CodigoDoPedido: Integer; var MensagemDeErro: string): Boolean;
+begin
+  Result := Self.FPedidoAPI.BuscaPedido(CodigoDoPedido, MensagemDeErro);
+  if Result then
+  begin
+    Self.memPedidoCapa.Close;
+    Self.memItensDoPedido.Close;
+
+    Self.memPedidoCapa.CloneCursor(Self.FPedidoAPI.memPedidoCapa);
+    Self.memItensDoPedido.CloneCursor(Self.FPedidoAPI.memPedidoItens);
+
+    if Self.memPedidoCapa.IsEmpty then
+    begin
+      Result := False;
+      MensagemDeErro := FN_PEDIDO_NAO_LOCALIZADO + #13#10
+                      + 'Sequência do pedido: ' + CodigoDoPedido.ToString;
+
+    end;
+  end;
+end;
+
+function TdmPedidoClient.ExcluiPedido(CodigoDoPedido: Integer; var MensagemDeErro: String): Boolean;
+begin
+  Result := Self.FPedidoAPI.ExcluiPedido(CodigoDoPedido, MensagemDeErro);
 end;
 
 

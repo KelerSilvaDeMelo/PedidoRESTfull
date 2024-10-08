@@ -40,7 +40,8 @@ implementation
 
 {$R *.dfm}
 
-uses UnitDMBaseAPI, UnitFormIncluirPedido, UnitFormListarPedidos;
+uses UnitDMBaseAPI, UnitFormIncluirPedido, UnitFormListarPedidos,
+  ClientConstsPedido, System.UITypes;
 
 {--------------------------------[ CONSTRUÇÃO ]--------------------------------}
 procedure TFormClientPedidos.FormCreate(Sender: TObject);
@@ -62,6 +63,7 @@ var
   MensagemErro: String;
 begin
   Self.TimerActivity.Enabled := False;
+  MensagemErro := MSG_ERRO_SERVIDOR_INDISPONIVEL;
   if dmGlobalAPI.TestarConexao(MensagemErro) then
   begin
     Self.Button1.Visible := True;
@@ -84,6 +86,7 @@ var
 begin
   CriaPedido := TFormIncluirPedido.Create(nil);
   try
+    MensagemDeErro := MSG_ERRO_SERVIDOR_INDISPONIVEL;
     if CriaPedido.Preparado(MensagemDeErro) then
     begin
       CriaPedido.ShowModal;
@@ -104,6 +107,7 @@ var
 begin
   ListarPedido := TFormListarPedidos.Create(nil);
   try
+    MensagemDeErro := MSG_ERRO_SERVIDOR_INDISPONIVEL;
     if ListarPedido.Preparado(MensagemDeErro) then
     begin
       ListarPedido.ShowModal;

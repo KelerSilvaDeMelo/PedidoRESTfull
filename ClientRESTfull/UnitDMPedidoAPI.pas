@@ -7,7 +7,8 @@ uses
   FireDAC.Comp.Client, IdHTTP, IdSSLOpenSSL, System.JSON, ClientConstsPedido,
   FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
   FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
-  FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin, System.Net.HttpClient;
+  FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin, System.Net.HttpClient,
+  System.Net.URLClient;
 
 type
   TdmPedidoAPI = class(TDataModule)
@@ -33,29 +34,42 @@ type
     memPedidosnome_cliente: TStringField;
     memPedidosdata_emissao_pedido: TDateField;
     memPedidosvalor_total_pedido: TBCDField;
+    memPedidoCapa: TFDMemTable;
+    FDAutoIncField1: TFDAutoIncField;
+    IntegerField1: TIntegerField;
+    StringField1: TStringField;
+    DateField1: TDateField;
+    BCDField1: TBCDField;
   private
     procedure ConfigurarMemTableClientes;
     procedure ConfigurarMemTableProdutos;
+    procedure ConfigurarMemTablePedido;
+    procedure ConfigurarMemTablePedidoItens;
     procedure ConfigurarMemTablePedidos;
-    procedure ConfigurarMemTableItens;
 
-    function ListaAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+    function getAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+    function GetIdAPI(const URL, ParametroID, ValorID: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+
+    function DeleteAPI(const URL: String; var MensagemDeErro: String): Boolean;
+    function DeleteIdAPI(const URL, ParametroID, ValorID: String; var MensagemDeErro: String): Boolean;
 
   public
     function ListarClientes(var MensagemDeErro: String): Boolean;
     function ListarProdutos(var MensagemDeErro: String): Boolean;
     function ListarPedidos(var MensagemDeErro: String): Boolean;
-    function ListarItensDoPedido(var MensagemDeErro: String): Boolean;
 
     function ProdutoExiste(CodigoDoProduto: Integer): Boolean;
     function BuscaValorDoProduto(CodigoDoProduto: Integer): Currency;
     function EnviaNovoPedido(DataSetPedido, DataSetItens: TFDMemTable; var MensagemDeErro: String): Boolean;
+    function BuscaPedido(const SequenciaDoPedido: Integer; var MensagemDeErro: String): Boolean;
+    function ExcluiPedido(const SequenciaDoPedido: Integer; var MensagemDeErro: String): Boolean;
+
   end;
 
 implementation
 
 uses
-  UnitDMBaseAPI;
+  UnitDMBaseAPI, System.NetEncoding, System.Generics.Collections;
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 {$R *.dfm}
@@ -66,6 +80,7 @@ procedure TdmPedidoAPI.ConfigurarMemTableClientes;
 begin
   Self.memClientes.Close;
   Self.memClientes.CreateDataSet;
+  Self.memClientes.EmptyDataSet;
 end;
 
 // Configura o MemTable Produtos
@@ -73,6 +88,23 @@ procedure TdmPedidoAPI.ConfigurarMemTableProdutos;
 begin
   Self.memProdutos.Close;
   Self.memProdutos.CreateDataSet;
+  Self.memProdutos.EmptyDataSet;
+end;
+
+// Configura o MemTable Pedido
+procedure TdmPedidoAPI.ConfigurarMemTablePedido;
+begin
+  Self.memPedidoCapa.Close;
+  Self.memPedidoCapa.CreateDataSet;
+  Self.memPedidoCapa.EmptyDataSet;
+end;
+
+// Configura o MemTable PedidoItens
+procedure TdmPedidoAPI.ConfigurarMemTablePedidoItens;
+begin
+  Self.memPedidoItens.Close;
+  Self.memPedidoItens.CreateDataSet;
+  Self.memPedidoItens.EmptyDataSet;
 end;
 
 // Configura o MemTable Pedidos
@@ -82,15 +114,8 @@ begin
   Self.memPedidos.CreateDataSet;
 end;
 
-// Configura o MemTable Itens
-procedure TdmPedidoAPI.ConfigurarMemTableItens;
-begin
-  Self.memPedidoItens.Close;
-  Self.memPedidoItens.CreateDataSet;
-end;
-
 // Metodo base para listagem via API
-function TdmPedidoAPI.ListaAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+function TdmPedidoAPI.getAPI(const URL: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
 var
   HTTPClient: TIdHTTP;
   SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
@@ -106,14 +131,18 @@ begin
   SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   try
     HTTPClient.IOHandler := SSLHandler;
+
     try
-      JsonResponse := HTTPClient.Get(Url);
-      JsonArray := TJSONObject.ParseJSONValue
-        (TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
+      // Faz a requisição GET para a URL (caso tenha parâmetros, devem ser codificados antes)
+      JsonResponse := HTTPClient.Get(URL); //TNetEncoding.URL.Encode(URL)
+
+      // Verifica se a resposta é um JSON array
+      JsonArray := TJSONObject.ParseJSONValue(TEncoding.UTF8.GetBytes(JsonResponse), 0) as TJSONArray;
 
       if JsonArray = nil then
-        raise Exception.Create('Resposta inválida do servidor.');
+        raise Exception.Create(MSG_ERRO_SERVIDOR_RESPOSTA_INVALIDA);
 
+      // Insere os dados no DataSet
       for I := 0 to JsonArray.Count - 1 do
       begin
         JsonObject := JsonArray.Items[I] as TJSONObject;
@@ -125,7 +154,9 @@ begin
         DataSetLista.Post;
       end;
 
-      DataSetLista.SaveToFile( dmGlobalAPI.PastaCache + 'ClientCache_' + DataSetLista.Name + '.json', sfJSON );
+      // Salva o cache localmente (opcional)
+      DataSetLista.SaveToFile(dmGlobalAPI.PastaCache + 'ClientCache_' + DataSetLista.Name + '.json', sfJSON);
+
       Result := True;
     except
       on E: Exception do
@@ -137,6 +168,88 @@ begin
   end;
 end;
 
+function TdmPedidoAPI.GetIdAPI(const URL, ParametroID, ValorID: String; DataSetLista: TFDMemTable; var MensagemDeErro: String): Boolean;
+var
+  UrlProtegida: String;
+begin
+  UrlProtegida := URL + '?' + TNetEncoding.URL.Encode(ParametroID) + '=' + TNetEncoding.URL.Encode(ValorID);
+  Result := Self.getAPI(UrlProtegida, DataSetLista, MensagemDeErro);
+end;
+
+function TdmPedidoAPI.DeleteAPI(const URL: String; var MensagemDeErro: String): Boolean;
+var
+  HTTPClient: TIdHTTP;
+  SSLHandler: TIdSSLIOHandlerSocketOpenSSL;
+  JsonResponse: string;
+  JsonObject: TJSONObject;
+  JSONValue: TJSONValue;
+begin
+  Result := False;
+
+  HTTPClient := TIdHTTP.Create(nil);
+  SSLHandler := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  try
+    HTTPClient.IOHandler := SSLHandler;
+
+    try
+      // Faz a requisição DELETE com os parâmetros
+      JsonResponse := HTTPClient.Delete(URL);
+
+      // Verifica o código de status da resposta HTTP
+      if HTTPClient.ResponseCode = 200 then
+      begin
+        // Verifica se a resposta não é vazia e se é um JSON válido
+        if JsonResponse <> '' then
+        begin
+          JSONValue := TJSONObject.ParseJSONValue(JsonResponse);
+
+          if Assigned(JSONValue) and (JSONValue is TJSONObject) then
+          begin
+            JsonObject := TJSONObject(JSONValue);
+            try
+              // Verifica se a resposta contém uma mensagem de erro ou sucesso
+              if JsonObject.GetValue('message') <> nil then
+                MensagemDeErro := JsonObject.GetValue('message').Value;
+
+              // Se tiver um campo "numero_pedido", considere a operação bem-sucedida
+              if JsonObject.GetValue('numero_pedido') <> nil then
+                Result := True;
+            finally
+              JsonObject.Free;
+            end;
+          end
+          else
+            MensagemDeErro := MSG_ERRO_SERVIDOR_RESPOSTA_INVALIDA;
+        end;
+      end
+      else
+      begin
+        MensagemDeErro := MensagemDeErro + #13#10 + #13#10 +
+         Format('Erro HTTP: %d - %s', [HTTPClient.ResponseCode, HTTPClient.ResponseText]);
+      end;
+
+    except
+      on E: Exception do
+        MensagemDeErro := MensagemDeErro + #13#10 + E.Message;
+    end;
+
+  finally
+    HTTPClient.Free;
+    SSLHandler.Free;
+  end;
+end;
+
+
+function TdmPedidoAPI.DeleteIdAPI(const URL, ParametroID, ValorID: String;
+  var MensagemDeErro: String): Boolean;
+var
+  UrlProtegida: String;
+begin
+  // Codifica apenas o valor do parâmetro
+  UrlProtegida := URL + '?' + ParametroID + '=' + TNetEncoding.URL.Encode(ValorID);
+  Result := Self.DeleteAPI(UrlProtegida, MensagemDeErro);
+end;
+
 
 { --------------------------------[ PÚBLICO ]--------------------------------- }
 
@@ -145,11 +258,11 @@ function TdmPedidoAPI.ListarClientes(var MensagemDeErro: String): Boolean;
 var
   URL: string;
 begin
-  URL := ENDPOINT_LISTAR_CLIENTES;
+  URL := ENDPOINT_LISTA_CLIENTES;
   MensagemDeErro := MSG_ERRO_LISTAR_CLIENTES;
 
   Self.ConfigurarMemTableClientes;
-  Result := Self.ListaAPI(URL, Self.memClientes, MensagemDeErro);
+  Result := Self.getAPI(URL, Self.memClientes, MensagemDeErro);
 end;
 
 // Lista os produtos e popula o MemTable Produtos
@@ -157,11 +270,11 @@ function TdmPedidoAPI.ListarProdutos(var MensagemDeErro: String): Boolean;
 var
   URL: string;
 begin
-  URL := ENDPOINT_LISTAR_PRODUTOS;
+  URL := ENDPOINT_LISTA_PRODUTOS;
   MensagemDeErro := MSG_ERRO_LISTAR_PRODUTOS;
 
   Self.ConfigurarMemTableProdutos;
-  Result := Self.ListaAPI(URL, Self.memProdutos, MensagemDeErro);
+  Result := Self.getAPI(URL, Self.memProdutos, MensagemDeErro);
 end;
 
 // Lista os pedidos e popula o MemTable Pedidos
@@ -169,23 +282,11 @@ function TdmPedidoAPI.ListarPedidos(var MensagemDeErro: String): Boolean;
 var
   URL: string;
 begin
-  URL := ENDPOINT_LISTAR_PEDIDOS;
+  URL := ENDPOINT_LISTA_PEDIDOS;
   MensagemDeErro := MSG_ERRO_LISTAR_PRODUTOS;
 
   Self.ConfigurarMemTablePedidos;
-  Result := Self.ListaAPI(URL, Self.memPedidos, MensagemDeErro);
-end;
-
-// Lista os pedidos e popula o MemTable ItensDoPedidos
-function TdmPedidoAPI.ListarItensDoPedido(var MensagemDeErro: String): Boolean;
-var
-  URL: string;
-begin
-  URL := ENDPOINT_LISTAR_ITENS_DO_PEDIDO;
-  MensagemDeErro := MSG_ERRO_LISTAR_PEDIDO_ITENS;
-
-  Self.ConfigurarMemTableProdutos;
-  Result := Self.ListaAPI(URL, Self.memPedidoItens, MensagemDeErro);
+  Result := Self.getAPI(URL, Self.memPedidos, MensagemDeErro);
 end;
 
 // Verifica a existência de um produto específico
@@ -218,62 +319,129 @@ begin
   Self.memProdutos.EnableControls;
 end;
 
+// Envia o novo pedido ao servidor de aplicação
 function TdmPedidoAPI.EnviaNovoPedido(DataSetPedido, DataSetItens: TFDMemTable;
   var MensagemDeErro: String): Boolean;
 var
+  JSONTable: TJSONArray;
+  JSONRow, JSONPedido, JSONResponse: TJSONObject;
+  Campo: TField;
+  Marcador: TBookmark;
   HTTPClient: THTTPClient;
-  Params: TStringList;
+  StringStream: TStringStream;
   Response: IHTTPResponse;
-  JsonResponse: TJSONObject;
   PedidoID: Integer;
-  ResponseContent, CodigoCliente, DataEmissao, ValorTotal: String;
+  ResponseContent: String;
 begin
   Result := False;
-  HTTPClient := THTTPClient.Create;
-  Params := TStringList.Create;
-  JsonResponse := nil;
+  JSONTable := TJSONArray.Create;
+  Marcador := DataSetItens.Bookmark;
+
+  // Monta o array JSON dos itens do pedido
+  DataSetItens.DisableControls;
+  DataSetItens.First;
+  while not DataSetItens.Eof do
+  begin
+    JSONRow := TJSONObject.Create;
+    JSONRow.AddPair('sequencia_pedido', DataSetItens.FieldByName('sequencia_pedido').AsString);
+    JSONRow.AddPair('codigo_produto', DataSetItens.FieldByName('codigo_produto').AsString);
+    JSONRow.AddPair('quantidade_produto', DataSetItens.FieldByName('quantidade_produto').AsString);
+    JSONRow.AddPair('valor_unitario_produto', TJSONNumber.Create(DataSetItens.FieldByName('valor_unitario_produto').AsCurrency));
+    JSONRow.AddPair('valor_total_produto', TJSONNumber.Create(DataSetItens.FieldByName('valor_total_produto').AsCurrency));
+    JSONTable.AddElement(JSONRow);
+    DataSetItens.Next;
+  end;
+  DataSetItens.GotoBookmark(Marcador);
+  DataSetItens.EnableControls;
+
+  // Monta o objeto JSON do pedido
+  JSONPedido := TJSONObject.Create;
   try
-    // Preenche os dados do pedido
-    CodigoCliente := DataSetPedido.FieldByName('codigo_cliente').AsString;
-    DataEmissao := DataSetPedido.FieldByName('data_emissao_pedido').AsString;
-    ValorTotal := DataSetPedido.FieldByName('valor_total_pedido').AsString;
+    JSONPedido.AddPair('codigo_cliente', DataSetPedido.FieldByName('codigo_cliente').AsString);
+    JSONPedido.AddPair('data_emissao_pedido', DataSetPedido.FieldByName('data_emissao_pedido').AsString);
+    JSONPedido.AddPair('valor_total_pedido', TJSONNumber.Create(DataSetPedido.FieldByName('valor_total_pedido').AsCurrency));
+    JSONPedido.AddPair('itens', JSONTable); // Adiciona o array de itens ao pedido
 
-    Params.Add('cliente_id=' + CodigoCliente);
-    Params.Add('data=' + DataEmissao);
-    Params.Add('valor_total=' + ValorTotal);
+    // Converte o objeto JSON em string para enviar no corpo da requisição
+    StringStream := TStringStream.Create(JSONPedido.ToString, TEncoding.UTF8);
+    HTTPClient := THTTPClient.Create;
+    try
+      // Envia a requisição POST com o corpo JSON
+      Response := HTTPClient.Post(ENDPOINT_INCLUI_PEDIDO, StringStream, nil, [TNetHeader.Create('Content-Type', 'application/json')]);
 
-    // Envia a requisição POST para o servidor
-    Response := HTTPClient.Post(ENDPOINT_INCLUIR_PEDIDO, Params);
+      // Verifica o código de status da resposta
+      if Response.StatusCode = 201 then
+      begin
+        Result := True;
+        ResponseContent := Response.ContentAsString;
 
-    // Verifica o código de status da resposta
-    if Response.StatusCode = 201 then
-    begin
-      Result := True;
-      ResponseContent := Response.ContentAsString;
+        // Analisa o conteúdo JSON da resposta
+        JSONResponse := TJSONObject.ParseJSONValue(ResponseContent) as TJSONObject;
+        try
+          if Assigned(JSONResponse) then
+          begin
+            // Extrai o valor de pedido_id
+            PedidoID := JSONResponse.GetValue<Integer>('numero_pedido');
 
-      // Analisa o conteúdo JSON da resposta
-      JsonResponse := TJSONObject.ParseJSONValue(ResponseContent) as TJSONObject;
-      try
-        if Assigned(JsonResponse) then
-        begin
-          // Extrai o valor de pedido_id
-          PedidoID := JsonResponse.GetValue<Integer>('pedido_id');
-
-          // Atualiza o campo 'sequencia_pedido' no DataSet
-          DataSetPedido.FieldByName('sequencia_pedido').AsInteger := PedidoID;
+            // Atualiza o campo 'sequencia_pedido' no DataSet
+            DataSetPedido.FieldByName('sequencia_pedido').AsInteger := PedidoID;
+          end;
+        finally
+          JSONResponse.Free;
         end;
-      finally
-        JsonResponse.Free;
+      end
+      else
+      begin
+        MensagemDeErro := MensagemDeErro + #13#10 + Response.ContentAsString;
       end;
-    end
-    else
-    begin
-      MensagemDeErro := MensagemDeErro + #13#10 + Response.ContentAsString;
+    finally
+      StringStream.Free;
+      HTTPClient.Free;
     end;
   finally
-    Params.Free;
-    HTTPClient.Free;
+    JSONPedido.Free;
+    // JSONTable.Free; já esta limpo
   end;
+end;
+
+// Busca um pedido específico.
+function TdmPedidoAPI.BuscaPedido(const SequenciaDoPedido: Integer; var MensagemDeErro: String): Boolean;
+var
+  URL, ParametroID, ParametroValor: String;
+begin
+  Result := False;
+  Self.ConfigurarMemTablePedido;
+  Self.ConfigurarMemTablePedidoItens;
+
+  URL := ENDPOINT_BUSCA_PEDIDO;
+  ParametroID := 'numero_pedido';
+  ParametroValor := SequenciaDoPedido.ToString;
+  MensagemDeErro := MSG_ERRO_BUSCAR_PEDIDO;
+
+  Result := Self.GetIdAPI(URL, ParametroID, ParametroValor, Self.memPedidoCapa, MensagemDeErro);
+  if not Result then
+    Exit;
+
+  URL := ENDPOINT_BUSCA_ITENS_PEDIDO;
+  ParametroID := 'numero_pedido';
+  Result := Self.GetIdAPI(URL, ParametroID, ParametroValor, Self.memPedidoItens, MensagemDeErro);
+end;
+
+// Exclui um pedido específico.
+function TdmPedidoAPI.ExcluiPedido(const SequenciaDoPedido: Integer;
+  var MensagemDeErro: String): Boolean;
+var
+  URL, ParametroID, ParametroValor: String;
+begin
+  Result := False;
+
+  URL := ENDPOINT_EXCLUI_PEDIDO;
+  ParametroID := 'numero_pedido';
+  ParametroValor := SequenciaDoPedido.ToString;
+  MensagemDeErro := MSG_ERRO_EXCLUI_PEDIDO;
+
+//  Result := Self.ListaIdAPI(URL, ParametroID, ParametroValor, Self.memPedidoCapa, MensagemDeErro);
+  Result := Self.DeleteIdAPI(URL, ParametroID, ParametroValor, MensagemDeErro);
 end;
 
 end.

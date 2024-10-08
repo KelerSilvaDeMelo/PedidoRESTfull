@@ -16,39 +16,51 @@ object wmServerPedido: TwmServerPedido
     end
     item
       MethodType = mtGet
-      Name = 'ListarClientes'
-      PathInfo = '/ListarClientes'
-      OnAction = wmServerPedidoListarClientesAction
+      Name = 'ListaClientes'
+      PathInfo = '/ListaClientes'
+      OnAction = wmServerPedidoListaClientesAction
     end
     item
       MethodType = mtGet
-      Name = 'ListarProdutos'
-      PathInfo = '/ListarProdutos'
-      OnAction = WebModule1ListarProdutosAction
+      Name = 'ListaProdutos'
+      PathInfo = '/ListaProdutos'
+      OnAction = WebModule1ListaProdutosAction
     end
     item
       MethodType = mtGet
-      Name = 'ListarPedidos'
-      PathInfo = '/ListarPedidos'
-      OnAction = WebModule1ListarPedidosAction
-    end
-    item
-      MethodType = mtGet
-      Name = 'ListarItensDoPedido'
-      PathInfo = '/ListarItensDoPedido'
-      OnAction = wmServerPedidoListarItensDoPedidoAction
+      Name = 'ListaPedidos'
+      PathInfo = '/ListaPedidos'
+      OnAction = WebModule1ListaPedidosAction
     end
     item
       MethodType = mtPost
-      Name = 'InserirPedido'
-      PathInfo = '/InserirPedido'
-      OnAction = WebModule1InserirPedidoAction
+      Name = 'InserePedido'
+      PathInfo = '/InserePedido'
+      OnAction = WebModule1InserePedidoAction
+    end
+    item
+      MethodType = mtPost
+      Name = 'AdicionaItemAoPedido'
+      PathInfo = '/AdicionaItemAoPedido'
+      OnAction = WebModule1AdicionaItemAoPedidoAction
     end
     item
       MethodType = mtGet
-      Name = 'AdicionarItemAoPedido'
-      PathInfo = '/AdicionarItemAoPedido'
-      OnAction = WebModule1AdicionarItemAoPedidoAction
+      Name = 'BuscaPedido'
+      PathInfo = '/BuscaPedido'
+      OnAction = wmServerPedidoBuscaPedidoAction
+    end
+    item
+      MethodType = mtGet
+      Name = 'BuscaItensDoPedido'
+      PathInfo = '/BuscaItensDoPedido'
+      OnAction = wmServerPedidoBuscaItensDoPedidoAction
+    end
+    item
+      MethodType = mtDelete
+      Name = 'ExcluiPedido'
+      PathInfo = '/ExcluiPedido'
+      OnAction = wmServerPedidoExcluiPedidoAction
     end>
   Height = 204
   Width = 424

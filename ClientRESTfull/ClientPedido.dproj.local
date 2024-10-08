@@ -35,8 +35,8 @@
     <Transaction>2024/10/01 11:45:47.000.352,=C:\Provas\WK Tecnology\ClientRESTFul\Unit1.pas</Transaction>
     <Transaction>2024/10/01 11:46:34.000.333,C:\Provas\WK Tecnology\ClientRESTFul\Unit1.pas=C:\Provas\WK Tecnology\ClientRESTFul\UnitFormListarPedidos.pas</Transaction>
     <Transaction>2024/10/01 11:46:34.000.333,C:\Provas\WK Tecnology\ClientRESTFul\Unit1.dfm=C:\Provas\WK Tecnology\ClientRESTFul\UnitFormListarPedidos.dfm</Transaction>
-    <Transaction>2024/10/02 08:56:03.178,=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.pas</Transaction>
-    <Transaction>2024/10/02 08:57:22.019,C:\Provas\WK Tecnology\ClientRESTfull\UnitDMPedidoClient.pas=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.pas</Transaction>
-    <Transaction>2024/10/02 08:57:22.019,C:\Provas\WK Tecnology\ClientRESTfull\UnitDMPedidoClient.dfm=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.dfm</Transaction>
+    <Transaction>2024/10/02 08:56:03.000.178,=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.pas</Transaction>
+    <Transaction>2024/10/02 08:57:22.000.019,C:\Provas\WK Tecnology\ClientRESTfull\UnitDMPedidoClient.pas=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.pas</Transaction>
+    <Transaction>2024/10/02 08:57:22.000.019,C:\Provas\WK Tecnology\ClientRESTfull\UnitDMPedidoClient.dfm=C:\Provas\WK Tecnology\ClientRESTfull\Unit1.dfm</Transaction>
   </Transactions>
 </BorlandProject>
